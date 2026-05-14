@@ -9,12 +9,16 @@ const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string
   low: { label: 'LOW', color: '#00f7ff', bg: 'rgba(0,247,255,0.10)' },
 }
 
-function LightningBolt({ color, flash }: { color: string; flash: boolean }) {
+function Arrow({ color, flash }: { color: string; flash: boolean }) {
   return (
-    <svg width="16" height="12" viewBox="0 0 16 12" className={`shrink-0 ${flash ? 'animate-pulse-glow' : ''}`}>
+    <svg width="14" height="10" viewBox="0 0 14 10" className={`shrink-0 ${flash ? 'animate-pulse-glow' : ''}`}>
       <path
-        d="M2,10 L7,2 L9,5 L14,1 L11,7 L9,4 L4,11 Z"
-        fill={color}
+        d="M0,5 L11,5 M7,1 L12,5 L7,9"
+        stroke={color}
+        strokeWidth="1.5"
+        fill="none"
+        strokeLinecap="round"
+        strokeLinejoin="round"
         opacity={0.9}
       />
     </svg>
@@ -110,7 +114,7 @@ export function ThreatFeed({ filters }: Props) {
               <span className="text-white/70 truncate min-w-0 shrink">{e.attack_type}</span>
               <span className="inline-flex items-center gap-1 shrink-0">
                 <span className="text-white/30">{COUNTRY_FLAGS[e.source_country] || e.source_country}</span>
-                <LightningBolt color={sev.color} flash={flashIds.has(e.id)} />
+                <Arrow color={sev.color} flash={flashIds.has(e.id)} />
                 <span className="text-white/30">{COUNTRY_FLAGS[e.target_country] || e.target_country}</span>
               </span>
               <span className="text-white/20 shrink-0">:{e.port}</span>

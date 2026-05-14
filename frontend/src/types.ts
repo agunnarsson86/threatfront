@@ -70,4 +70,5 @@ export interface Filters {
   severity: string
   source_country: string
   attack_type: string
+  target_country: string
 }

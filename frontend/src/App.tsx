@@ -10,7 +10,7 @@ import type { Filters } from './types'
 import './App.css'
 
 export default function App() {
-  const [filters, setFilters] = useState<Filters>({ severity: 'all', attack_type: 'all', source_country: 'all' })
+  const [filters, setFilters] = useState<Filters>({ severity: 'all', attack_type: 'all', source_country: 'all', target_country: 'all' })
 
   return (
     <div className="app-container">

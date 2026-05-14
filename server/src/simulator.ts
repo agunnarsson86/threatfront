@@ -43,6 +43,19 @@ const COUNTRIES: Country[] = [
   { code: 'NG', lat: 9.08, lon: 8.68, weight: 1 },
 ]
 
+const TARGETS: Country[] = [
+  { code: 'SE', lat: 62.0, lon: 16.0, weight: 25 },
+  { code: 'US', lat: 37.09, lon: -95.71, weight: 20 },
+  { code: 'DE', lat: 51.16, lon: 10.45, weight: 12 },
+  { code: 'GB', lat: 55.38, lon: -3.44, weight: 10 },
+  { code: 'JP', lat: 36.20, lon: 138.25, weight: 8 },
+  { code: 'FR', lat: 46.60, lon: 1.88, weight: 7 },
+  { code: 'AU', lat: -25.27, lon: 133.78, weight: 6 },
+  { code: 'CA', lat: 56.13, lon: -106.35, weight: 5 },
+  { code: 'NL', lat: 52.13, lon: 5.29, weight: 4 },
+  { code: 'SG', lat: 1.35, lon: 103.82, weight: 3 },
+]
+
 const ATTACKS: AttackDef[] = [
   { name: 'SSH Brute Force', port: 22, protocol: 'TCP', severity: 'high' },
   { name: 'Port Scan', port: 22, protocol: 'TCP', severity: 'low' },
@@ -70,12 +83,23 @@ function pickCountry(): Country {
   return COUNTRIES[0]
 }
 
+function pickTarget(): Country {
+  const total = TARGETS.reduce((s, c) => s + c.weight, 0)
+  let r = Math.random() * total
+  for (const c of TARGETS) {
+    r -= c.weight
+    if (r <= 0) return c
+  }
+  return TARGETS[0]
+}
+
 function randomAttack(): AttackDef {
   return ATTACKS[Math.floor(Math.random() * ATTACKS.length)]
 }
 
 export function generateEvent(sourceIp?: string | null, attackOverride?: AttackDef | null): AttackEvent {
   const country = pickCountry()
+  const target = pickTarget()
   const attack = attackOverride ?? randomAttack()
   return {
     id: crypto.randomUUID(),
@@ -85,9 +109,9 @@ export function generateEvent(sourceIp?: string | null, attackOverride?: AttackD
     source_lat: country.lat + (Math.random() - 0.5) * 12,
     source_lon: country.lon + (Math.random() - 0.5) * 12,
     target_ip: randomIp(),
-    target_country: 'SE',
-    target_lat: 62.0 + (Math.random() - 0.5) * 6,
-    target_lon: 16.0 + (Math.random() - 0.5) * 6,
+    target_country: target.code,
+    target_lat: target.lat + (Math.random() - 0.5) * 12,
+    target_lon: target.lon + (Math.random() - 0.5) * 12,
     port: attack.port,
     protocol: attack.protocol,
     attack_type: attack.name,

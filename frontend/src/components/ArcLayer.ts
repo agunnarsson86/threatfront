@@ -8,8 +8,8 @@ interface ActiveArc {
   activatedAt: number
 }
 
-const ARC_HOLD = 20000
-const ARC_FADE = 10000
+const ARC_HOLD = 30000
+const ARC_FADE = 20000
 const ARC_LIFETIME = ARC_HOLD + ARC_FADE
 const TRAVEL_TIME = 2500
 
@@ -31,6 +31,10 @@ export function ArcLayer({ events }: { events: AttackEvent[] }) {
 
   useEffect(() => {
     const now = Date.now()
+    const ids = new Set(events.map((e) => e.id))
+    for (const [id] of arcsRef.current) {
+      if (!ids.has(id)) arcsRef.current.delete(id)
+    }
     for (const event of events) {
       if (!arcsRef.current.has(event.id)) {
         arcsRef.current.set(event.id, { event, activatedAt: now })

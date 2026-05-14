@@ -13,7 +13,7 @@ function MapContent({ filters }: { filters: Filters }) {
     map.setView([25, 20], 2)
     setTimeout(() => map.invalidateSize(), 100)
 
-    getEvents(30, filters).then((data) => setEvents(data.reverse()))
+    setEvents([])
 
     const unsub = onNewEvent((event) => {
       if (!matchesFilters(event, filters)) return

@@ -69,7 +69,7 @@ export function getEventCounts(): EventCounts {
   return { total: row.total, last_24h: row.last_24h, last_hour: row.last_hour }
 }
 
-export function getEvents(limit: number = 50, filters?: { severity?: string; attack_type?: string; source_country?: string }) {
+export function getEvents(limit: number = 50, filters?: { severity?: string; attack_type?: string; source_country?: string; target_country?: string }) {
   const db = getDb()
   let sql = 'select * from events where 1=1'
   const params: any[] = []
@@ -84,6 +84,10 @@ export function getEvents(limit: number = 50, filters?: { severity?: string; att
   if (filters?.source_country && filters.source_country !== 'all') {
     sql += ' and source_country = ?'
     params.push(filters.source_country)
+  }
+  if (filters?.target_country && filters.target_country !== 'all') {
+    sql += ' and target_country = ?'
+    params.push(filters.target_country)
   }
   sql += ' order by timestamp desc limit ?'
   params.push(limit)
@@ -106,6 +110,11 @@ export function getTopCountries() {
 export function getDistinctCountries() {
   const db = getDb()
   return db.prepare('select distinct source_country from events order by source_country').all() as { source_country: string }[]
+}
+
+export function getDistinctTargetCountries() {
+  const db = getDb()
+  return db.prepare('select distinct target_country from events order by target_country').all() as { target_country: string }[]
 }
 
 export function getTopPorts() {

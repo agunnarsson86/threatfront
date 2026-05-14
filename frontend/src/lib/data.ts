@@ -4,6 +4,7 @@ export function matchesFilters(e: AttackEvent, f: Filters): boolean {
   if (f.severity && f.severity !== 'all' && e.severity !== f.severity) return false
   if (f.attack_type && f.attack_type !== 'all' && e.attack_type !== f.attack_type) return false
   if (f.source_country && f.source_country !== 'all' && e.source_country !== f.source_country) return false
+  if (f.target_country && f.target_country !== 'all' && e.target_country !== f.target_country) return false
   return true
 }
 
@@ -16,6 +17,7 @@ function toParams(f?: Partial<Filters>): string {
   if (f.severity && f.severity !== 'all') p.set('severity', f.severity)
   if (f.attack_type && f.attack_type !== 'all') p.set('attack_type', f.attack_type)
   if (f.source_country && f.source_country !== 'all') p.set('source_country', f.source_country)
+  if (f.target_country && f.target_country !== 'all') p.set('target_country', f.target_country)
   const s = p.toString()
   return s ? `&${s}` : ''
 }
@@ -37,6 +39,11 @@ export async function getEvents(limit = 50, filters?: Partial<Filters>): Promise
 export async function getCountries(): Promise<string[]> {
   const data = await api<{ source_country: string }[]>('/api/countries')
   return data.map((d) => d.source_country).sort()
+}
+
+export async function getTargetCountries(): Promise<string[]> {
+  const data = await api<{ target_country: string }[]>('/api/target-countries')
+  return data.map((d) => d.target_country).sort()
 }
 
 export async function getTopCountries(): Promise<TopCountry[]> {
