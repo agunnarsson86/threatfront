@@ -42,7 +42,7 @@
 .panel-bottom-row {
   display: flex;
   gap: 12px;
-  height: 185px;
+  height: 260px;
   flex-shrink: 0;
 }
 
