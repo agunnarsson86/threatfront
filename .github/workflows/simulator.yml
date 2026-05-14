@@ -1,0 +1,17 @@
+name: Run Threat Simulator
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Supabase Edge Function
+        run: |
+          curl -s -L -X POST \
+            'https://lzzclkroazaxghglpbks.supabase.co/functions/v1/simulator' \
+            -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
+            -H 'Content-Type: application/json'

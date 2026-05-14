@@ -1,0 +1,78 @@
+.app-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a1a;
+}
+
+.main-area {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-wrapper {
+  position: absolute;
+  inset: 0;
+}
+
+.panel-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  display: flex;
+  padding: 12px;
+  gap: 12px;
+}
+
+.panel-overlay > * {
+  pointer-events: auto;
+}
+
+.panel-left {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+}
+
+.panel-right {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: stretch;
+  margin-left: auto;
+}
+
+.panel {
+  background: rgba(10, 10, 26, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.panel-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+@media (max-width: 1024px) {
+  .panel-left {
+    display: none;
+  }
+  .panel-right {
+    width: 280px;
+  }
+}
