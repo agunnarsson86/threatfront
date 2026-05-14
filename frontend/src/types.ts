@@ -35,6 +35,12 @@ export interface SeverityDistribution {
   count: number
 }
 
+export interface FeedPort {
+  port: number
+  count: number
+  label: string
+}
+
 export interface EventCounts {
   total: number
   last_24h: number

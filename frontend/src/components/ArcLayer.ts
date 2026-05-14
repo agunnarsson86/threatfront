@@ -8,9 +8,9 @@ interface ActiveArc {
   activatedAt: number
 }
 
-const ARC_LIFETIME = 4000
-const FADE_IN = 300
-const HOLD = 1800
+const ARC_LIFETIME = 20000
+const FADE_IN = 1000
+const FADE_OUT = 4000
 
 const SEVERITY_COLORS: Record<string, string> = {
   low: '#00d4ff',
@@ -70,7 +70,6 @@ export function ArcLayer({ events }: { events: AttackEvent[] }) {
       for (const arc of active) {
         const { event, activatedAt } = arc
         const elapsed = now - activatedAt
-        const progress = Math.min(elapsed / ARC_LIFETIME, 1)
 
         const from = map.latLngToContainerPoint(L.latLng(event.source_lat, event.source_lon))
         const to = map.latLngToContainerPoint(L.latLng(event.target_lat, event.target_lon))
@@ -89,48 +88,44 @@ export function ArcLayer({ events }: { events: AttackEvent[] }) {
         let alpha: number
         if (elapsed < FADE_IN) {
           alpha = elapsed / FADE_IN
-        } else if (elapsed < FADE_IN + HOLD) {
+        } else if (elapsed < ARC_LIFETIME - FADE_OUT) {
           alpha = 1
         } else {
-          alpha = Math.max(0, 1 - (elapsed - FADE_IN - HOLD) / (ARC_LIFETIME - FADE_IN - HOLD))
+          alpha = Math.max(0, (ARC_LIFETIME - elapsed) / FADE_OUT)
         }
 
+        const pulse = 0.6 + 0.4 * Math.sin(now * 0.0008 + activatedAt * 0.002)
+
         const color = SEVERITY_COLORS[event.severity] || '#00d4ff'
-        const width = event.severity === 'critical' ? 2.5 : event.severity === 'high' ? 2 : event.severity === 'medium' ? 1.5 : 1
+        const lineW = event.severity === 'critical' ? 1.5 : 1
 
         ctx.beginPath()
         ctx.moveTo(from.x, from.y)
         ctx.quadraticCurveTo(cpX, cpY, to.x, to.y)
         ctx.strokeStyle = color
-        ctx.lineWidth = width
-        ctx.globalAlpha = alpha * 0.7
-        ctx.shadowBlur = 12
-        ctx.shadowColor = color
+        ctx.lineWidth = lineW
+        ctx.globalAlpha = alpha * 0.15
         ctx.stroke()
 
-        const travelT = Math.min(elapsed / (ARC_LIFETIME * 0.5), 1)
-        const t = travelT
-        const dotX = (1 - t) * (1 - t) * from.x + 2 * (1 - t) * t * cpX + t * t * to.x
-        const dotY = (1 - t) * (1 - t) * from.y + 2 * (1 - t) * t * cpY + t * t * to.y
-
         ctx.beginPath()
-        ctx.arc(dotX, dotY, 3, 0, Math.PI * 2)
-        ctx.fillStyle = '#ffffff'
-        ctx.globalAlpha = alpha
-        ctx.shadowBlur = 15
-        ctx.shadowColor = color
+        ctx.arc(from.x, from.y, 4, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.globalAlpha = alpha * 0.45 * pulse
         ctx.fill()
 
         ctx.beginPath()
-        ctx.arc(to.x, to.y, 3 + (1 - progress) * 3, 0, Math.PI * 2)
+        ctx.arc(from.x, from.y, 7, 0, Math.PI * 2)
         ctx.strokeStyle = color
-        ctx.lineWidth = 1.5
-        ctx.globalAlpha = alpha * 0.5
-        ctx.shadowBlur = 10
-        ctx.shadowColor = color
+        ctx.lineWidth = 1
+        ctx.globalAlpha = alpha * 0.12 * pulse
         ctx.stroke()
 
-        ctx.shadowBlur = 0
+        ctx.beginPath()
+        ctx.arc(to.x, to.y, 2, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.globalAlpha = alpha * 0.25
+        ctx.fill()
+
         ctx.globalAlpha = 1
       }
 

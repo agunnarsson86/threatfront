@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import type { TopCountry, TopPort, AttackDistribution, SeverityDistribution } from '../types'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import { getTopCountries, getFeedPorts, getAttackDistribution, getSeverityDistribution, onNewEvent } from '../lib/data'
+import type { TopCountry, FeedPort, AttackDistribution, SeverityDistribution } from '../types'
 
 const COUNTRY_FLAGS: Record<string, string> = {
   CN: '🇨🇳', RU: '🇷🇺', US: '🇺🇸', KP: '🇰🇵', IR: '🇮🇷',
@@ -24,31 +23,28 @@ const SEVERITY_NAMES: Record<string, string> = {
 
 export function StatsPanel() {
   const [topCountries, setTopCountries] = useState<TopCountry[]>([])
-  const [topPorts, setTopPorts] = useState<TopPort[]>([])
   const [attackDist, setAttackDist] = useState<AttackDistribution[]>([])
   const [severityDist, setSeverityDist] = useState<SeverityDistribution[]>([])
+  const [feedPorts, setFeedPorts] = useState<FeedPort[]>([])
 
   useEffect(() => {
     async function load() {
-      const [countries, ports, attacks, severities] = await Promise.all([
-        supabase.from('top_countries').select('*'),
-        supabase.from('top_ports').select('*'),
-        supabase.from('attack_distribution').select('*'),
-        supabase.from('severity_distribution').select('*'),
+      const [countries, fports, attacks, severities] = await Promise.all([
+        getTopCountries(),
+        getFeedPorts(),
+        getAttackDistribution(),
+        getSeverityDistribution(),
       ])
-      if (countries.data) setTopCountries(countries.data as TopCountry[])
-      if (ports.data) setTopPorts(ports.data as TopPort[])
-      if (attacks.data) setAttackDist(attacks.data as AttackDistribution[])
-      if (severities.data) setSeverityDist(severities.data as SeverityDistribution[])
+      setTopCountries(countries)
+      setFeedPorts(fports)
+      setAttackDist(attacks)
+      setSeverityDist(severities)
     }
     load()
 
-    const channel = supabase
-      .channel('stats-refresh')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'events' }, load)
-      .subscribe()
+    const unsub = onNewEvent(load)
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { unsub() }
   }, [])
 
   const totalSeverity = severityDist.reduce((s, d) => s + d.count, 0) || 1
@@ -101,20 +97,23 @@ export function StatsPanel() {
       </div>
 
       <div className="panel">
-        <div className="panel-title">Top Ports</div>
+        <div className="panel-title">Top Ports (SANS Feed)</div>
         <div className="space-y-1">
-          {topPorts.slice(0, 5).map((p) => (
+          {feedPorts.slice(0, 5).map((p) => (
             <div key={p.port} className="flex items-center gap-2 text-xs">
               <span className="text-accent-cyan w-8 font-medium">{p.port}</span>
               <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full bg-accent-cyan/60"
-                  style={{ width: `${(p.count / (topPorts[0]?.count || 1)) * 100}%` }}
+                  style={{ width: `${(p.count / (feedPorts[0]?.count || 1)) * 100}%` }}
                 />
               </div>
-              <span className="text-white/40 w-12 text-right">{p.count}</span>
+              <span className="text-white/40 w-12 text-right">{p.count.toLocaleString()}</span>
             </div>
           ))}
+          {feedPorts.length === 0 && (
+            <div className="text-xs text-white/20 text-center py-4">Waiting for SANS data...</div>
+          )}
         </div>
       </div>
     </>

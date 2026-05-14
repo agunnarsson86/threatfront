@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { getEvents, onNewEvent } from '../lib/data'
 import type { AttackEvent } from '../types'
 
 const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
@@ -16,31 +16,21 @@ const COUNTRY_FLAGS: Record<string, string> = {
 
 export function ThreatFeed() {
   const [events, setEvents] = useState<AttackEvent[]>([])
+  const [tick, setTick] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    supabase
-      .from('events')
-      .select('*')
-      .order('timestamp', { ascending: false })
-      .limit(50)
-      .then(({ data }) => {
-        if (data) setEvents(data as AttackEvent[])
+    const ticker = setInterval(() => setTick((t) => t + 1), 1000)
+    getEvents(20).then((data) => setEvents(data))
+
+    const unsub = onNewEvent((newEvent) => {
+      setEvents((prev) => {
+        if (prev.some((e) => e.id === newEvent.id)) return prev
+        return [newEvent, ...prev].slice(0, 20)
       })
+    })
 
-    const channel = supabase
-      .channel('feed-events')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'events' },
-        (payload) => {
-          const newEvent = payload.new as AttackEvent
-          setEvents((prev) => [newEvent, ...prev].slice(0, 100))
-        }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    return () => { clearInterval(ticker); unsub() }
   }, [])
 
   useEffect(() => {
@@ -48,6 +38,8 @@ export function ThreatFeed() {
       listRef.current.scrollTop = 0
     }
   }, [events.length])
+
+  const fadeStart = 15
 
   function timeAgo(timestamp: string): string {
     const sec = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000)
@@ -57,6 +49,12 @@ export function ThreatFeed() {
     return `${Math.floor(sec / 3600)}h ago`
   }
 
+  function itemOpacity(timestamp: string): number {
+    const sec = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000)
+    if (sec < fadeStart) return 1
+    return Math.max(0, 1 - (sec - fadeStart) / 20)
+  }
+
   return (
     <div className="panel flex-1 overflow-hidden flex flex-col">
       <div className="panel-title flex items-center justify-between">
@@ -64,13 +62,14 @@ export function ThreatFeed() {
         <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-glow" />
       </div>
       <div ref={listRef} className="overflow-y-auto flex-1 -mx-1 px-1 space-y-0.5">
-        {events.map((e) => {
+        {events.map((e, i) => {
           const sev = SEVERITY_CONFIG[e.severity]
+          const fade = i > 0 ? itemOpacity(e.timestamp) : 1
           return (
             <div
               key={e.id}
-              className="flex items-center gap-2 py-1.5 px-2 rounded text-[11px] hover:bg-white/5 transition-colors animate-slide-in"
-              style={{ borderLeft: `2px solid ${sev.color}` }}
+              className="flex items-center gap-2 py-1.5 px-2 rounded text-[11px] hover:bg-white/5 transition-colors"
+              style={{ borderLeft: `2px solid ${sev.color}`, opacity: fade }}
             >
               <span
                 className="text-[9px] font-bold px-1 py-0.5 rounded shrink-0"

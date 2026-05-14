@@ -1,36 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Shield, Activity, Clock } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { getEventCounts, onNewEvent } from '../lib/data'
 import type { EventCounts } from '../types'
 
 export function Header() {
   const [counts, setCounts] = useState<EventCounts>({ total: 0, last_24h: 0, last_hour: 0 })
-  const [eventsPerSec, setEventsPerSec] = useState(0)
+  const [eventsPerHour, setEventsPerHour] = useState(0)
+  const hourTimestamps = useRef<number[]>([])
 
   useEffect(() => {
-    async function fetchCounts() {
-      const { data } = await supabase.from('event_counts').select('*').maybeSingle()
-      if (data) setCounts(data as EventCounts)
-    }
-    fetchCounts()
+    getEventCounts().then(setCounts)
 
-    const channel = supabase
-      .channel('header-counts')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'events' },
-        () => {
-          setCounts((prev) => ({ ...prev, total: prev.total + 1, last_24h: prev.last_24h + 1, last_hour: prev.last_hour + 1 }))
-          setEventsPerSec((prev) => prev + 1)
-        }
-      )
-      .subscribe()
+    const unsub = onNewEvent(() => {
+      setCounts((prev) => ({ ...prev, total: prev.total + 1, last_24h: prev.last_24h + 1, last_hour: prev.last_hour + 1 }))
+      hourTimestamps.current.push(Date.now())
+    })
 
-    const secInterval = setInterval(() => setEventsPerSec(0), 1000)
+    const hourInterval = setInterval(() => {
+      const cutoff = Date.now() - 3600000
+      hourTimestamps.current = hourTimestamps.current.filter((t) => t > cutoff)
+      setEventsPerHour(hourTimestamps.current.length)
+    }, 1000)
 
     return () => {
-      supabase.removeChannel(channel)
-      clearInterval(secInterval)
+      unsub()
+      clearInterval(hourInterval)
     }
   }, [])
 
@@ -46,8 +40,8 @@ export function Header() {
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 text-xs">
           <Activity className="w-3.5 h-3.5 text-accent-cyan" />
-          <span className="text-white/50">Events/s:</span>
-          <span className="text-white/80 font-medium min-w-[3ch] text-right">{eventsPerSec}</span>
+          <span className="text-white/50">Events/h:</span>
+          <span className="text-white/80 font-medium min-w-[5ch] text-right">{eventsPerHour}</span>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <Clock className="w-3.5 h-3.5 text-accent-cyan" />

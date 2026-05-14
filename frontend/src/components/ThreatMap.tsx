@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
-import { supabase } from '../lib/supabase'
+import 'leaflet/dist/leaflet.css'
+import { getEvents, onNewEvent } from '../lib/data'
 import type { AttackEvent } from '../types'
 import { ArcLayer } from './ArcLayer'
 
@@ -10,28 +11,18 @@ function MapContent() {
 
   useEffect(() => {
     map.setView([25, 20], 2)
+    setTimeout(() => map.invalidateSize(), 100)
 
-    supabase
-      .from('events')
-      .select('*')
-      .order('timestamp', { ascending: false })
-      .limit(30)
-      .then(({ data }) => {
-        if (data) setEvents((data as AttackEvent[]).reverse())
+    getEvents(30).then((data) => setEvents(data.reverse()))
+
+    const unsub = onNewEvent((event) => {
+      setEvents((prev) => {
+        if (prev.some((e) => e.id === event.id)) return prev
+        return [...prev, event].slice(-30)
       })
+    })
 
-    const channel = supabase
-      .channel('map-events')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'events' },
-        (payload) => {
-          setEvents((prev) => [...prev, payload.new as AttackEvent].slice(-30))
-        }
-      )
-      .subscribe()
-
-    return () => { supabase.removeChannel(channel) }
+    return () => { unsub() }
   }, [map])
 
   return (

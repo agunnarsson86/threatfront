@@ -27,6 +27,7 @@
   display: flex;
   padding: 12px;
   gap: 12px;
+  z-index: 10;
 }
 
 .panel-overlay > * {
