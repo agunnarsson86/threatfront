@@ -9,9 +9,19 @@ jobs:
   simulate:
     runs-on: ubuntu-latest
     steps:
-      - name: Call Supabase Edge Function
-        run: |
-          curl -s -L -X POST \
-            'https://lzzclkroazaxghglpbks.supabase.co/functions/v1/simulator' \
-            -H 'Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}' \
-            -H 'Content-Type: application/json'
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - run: npm ci
+        working-directory: backend
+
+      - run: npx tsx simulator.ts
+        working-directory: backend
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
