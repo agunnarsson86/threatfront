@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react'
 import { ThreatFeed } from '../components/ThreatFeed'
 import type { AttackEvent } from '../types'
 
+const NO_FILTERS = { severity: 'all', attack_type: 'all', source_country: 'all' }
+
 const MOCK_EVENTS = vi.hoisted(() => [
   {
     id: '1',
@@ -39,7 +41,7 @@ const MOCK_EVENTS = vi.hoisted(() => [
 ] as AttackEvent[])
 
 vi.mock('../lib/data', () => ({
-  getEvents: vi.fn(() => Promise.resolve(MOCK_EVENTS)),
+  getEvents: vi.fn((_limit, _filters) => Promise.resolve(MOCK_EVENTS)),
   getFeedPorts: vi.fn(() => Promise.resolve([])),
   onNewEvent: vi.fn(() => vi.fn()),
 }))
@@ -50,24 +52,24 @@ describe('ThreatFeed', () => {
   })
 
   it('renders the panel title', () => {
-    render(<ThreatFeed />)
+    render(<ThreatFeed filters={NO_FILTERS} />)
     expect(screen.getByText('Live Feed')).toBeInTheDocument()
   })
 
   it('displays event attack types', async () => {
-    render(<ThreatFeed />)
+    render(<ThreatFeed filters={NO_FILTERS} />)
     expect(await screen.findByText('SSH Brute Force')).toBeInTheDocument()
     expect(await screen.findByText('Web Exploit')).toBeInTheDocument()
   })
 
   it('displays severity badges', async () => {
-    render(<ThreatFeed />)
+    render(<ThreatFeed filters={NO_FILTERS} />)
     expect(await screen.findByText('HIGH')).toBeInTheDocument()
     expect(await screen.findByText('CRIT')).toBeInTheDocument()
   })
 
   it('renders feed items with correct structure', async () => {
-    render(<ThreatFeed />)
+    render(<ThreatFeed filters={NO_FILTERS} />)
     const items = await screen.findAllByText(/SSH Brute Force|Web Exploit/)
     expect(items).toHaveLength(2)
   })

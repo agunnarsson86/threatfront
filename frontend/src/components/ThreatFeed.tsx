@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { getEvents, onNewEvent } from '../lib/data'
-import type { AttackEvent } from '../types'
+import { getEvents, onNewEvent, matchesFilters } from '../lib/data'
+import type { AttackEvent, Filters } from '../types'
 
 const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   critical: { label: 'CRIT', color: '#ff0044', bg: 'rgba(255,0,68,0.15)' },
@@ -26,7 +26,11 @@ const COUNTRY_FLAGS: Record<string, string> = {
   BR: '🇧🇷', IN: '🇮🇳', VN: '🇻🇳', NG: '🇳🇬', SE: '🇸🇪',
 }
 
-export function ThreatFeed() {
+interface Props {
+  filters: Filters
+}
+
+export function ThreatFeed({ filters }: Props) {
   const [events, setEvents] = useState<AttackEvent[]>([])
   const [tick, setTick] = useState(0)
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set())
@@ -34,9 +38,14 @@ export function ThreatFeed() {
 
   useEffect(() => {
     const ticker = setInterval(() => setTick((t) => t + 1), 1000)
-    getEvents(20).then((data) => setEvents(data))
+    return () => clearInterval(ticker)
+  }, [])
+
+  useEffect(() => {
+    getEvents(20, filters).then((data) => setEvents(data))
 
     const unsub = onNewEvent((newEvent) => {
+      if (!matchesFilters(newEvent, filters)) return
       setEvents((prev) => {
         if (prev.some((e) => e.id === newEvent.id)) return prev
         return [newEvent, ...prev].slice(0, 20)
@@ -51,8 +60,8 @@ export function ThreatFeed() {
       }, 1000)
     })
 
-    return () => { clearInterval(ticker); unsub() }
-  }, [])
+    return () => { unsub() }
+  }, [filters])
 
   useEffect(() => {
     if (listRef.current) {

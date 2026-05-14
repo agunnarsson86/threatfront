@@ -67,7 +67,7 @@ export interface RssResult {
 }
 
 export interface Filters {
-  severity: string | null
-  source_country: string | null
-  attack_type: string | null
+  severity: string
+  source_country: string
+  attack_type: string
 }

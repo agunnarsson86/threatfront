@@ -33,7 +33,7 @@
 - **ThreatFeed**: max 20 items, newest first, first item always full opacity, older items fade out after 15s, fully gone at 35s. 1s tick for live opacity/time-ago updates.
 - **StatsPanel**: Top Countries, Severity distribution, SANS Feed Ports (from `/api/feed-ports`). Removed simulated top ports. Reloads all data on each new event.
 - **Header**: rolling events/h counter (timestamps kept in a ref, filtered every 1s).
-- **WebSocket**: auto-reconnects with 2s delay. Redundant `onerror → close` handler removed; only calls `ws.close()` when `readyState === OPEN`.
+- **WebSocket**: auto-reconnects with 2s delay. Cleanup always closes the socket (regardless of `readyState`) and nulls `onclose` to prevent reconnection.
 
 ## Gotchas
 

@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
-import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, insertEvent, close } from './db.js'
+import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, getDistinctCountries, insertEvent, close } from './db.js'
 import { generateBatch, generateHistorical } from './simulator.js'
 import { getRandomThreat, getFeedPorts, ensureFeed, startFeedRefresh, getFeedStats } from './threatfeed.js'
 import { fetchRss } from './rss.js'
@@ -54,9 +54,18 @@ app.get('/api/severity-dist', (_req, res) => {
   res.json(getSeverityDistribution())
 })
 
+app.get('/api/countries', (_req, res) => {
+  res.json(getDistinctCountries())
+})
+
 app.get('/api/events', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 200)
-  res.json(getEvents(limit))
+  const filters = {
+    severity: req.query.severity as string | undefined,
+    attack_type: req.query.attack_type as string | undefined,
+    source_country: req.query.source_country as string | undefined,
+  }
+  res.json(getEvents(limit, filters))
 })
 
 app.post('/api/rss/fetch', async (req, res) => {

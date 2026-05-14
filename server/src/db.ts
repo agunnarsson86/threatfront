@@ -69,9 +69,25 @@ export function getEventCounts(): EventCounts {
   return { total: row.total, last_24h: row.last_24h, last_hour: row.last_hour }
 }
 
-export function getEvents(limit: number = 50) {
+export function getEvents(limit: number = 50, filters?: { severity?: string; attack_type?: string; source_country?: string }) {
   const db = getDb()
-  return db.prepare('select * from events order by timestamp desc limit ?').all(limit)
+  let sql = 'select * from events where 1=1'
+  const params: any[] = []
+  if (filters?.severity && filters.severity !== 'all') {
+    sql += ' and severity = ?'
+    params.push(filters.severity)
+  }
+  if (filters?.attack_type && filters.attack_type !== 'all') {
+    sql += ' and attack_type = ?'
+    params.push(filters.attack_type)
+  }
+  if (filters?.source_country && filters.source_country !== 'all') {
+    sql += ' and source_country = ?'
+    params.push(filters.source_country)
+  }
+  sql += ' order by timestamp desc limit ?'
+  params.push(limit)
+  return db.prepare(sql).all(...params)
 }
 
 export function insertEvent(event: any) {
@@ -85,6 +101,11 @@ export function insertEvent(event: any) {
 export function getTopCountries() {
   const db = getDb()
   return db.prepare('select source_country, count(*) as count from events group by source_country order by count desc limit 10').all()
+}
+
+export function getDistinctCountries() {
+  const db = getDb()
+  return db.prepare('select distinct source_country from events order by source_country').all() as { source_country: string }[]
 }
 
 export function getTopPorts() {

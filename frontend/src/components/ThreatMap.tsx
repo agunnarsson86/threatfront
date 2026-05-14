@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getEvents, onNewEvent } from '../lib/data'
-import type { AttackEvent } from '../types'
+import { getEvents, onNewEvent, matchesFilters } from '../lib/data'
+import type { AttackEvent, Filters } from '../types'
 import { ArcLayer } from './ArcLayer'
 
-function MapContent() {
+function MapContent({ filters }: { filters: Filters }) {
   const [events, setEvents] = useState<AttackEvent[]>([])
   const map = useMap()
 
@@ -13,9 +13,10 @@ function MapContent() {
     map.setView([25, 20], 2)
     setTimeout(() => map.invalidateSize(), 100)
 
-    getEvents(30).then((data) => setEvents(data.reverse()))
+    getEvents(30, filters).then((data) => setEvents(data.reverse()))
 
     const unsub = onNewEvent((event) => {
+      if (!matchesFilters(event, filters)) return
       setEvents((prev) => {
         if (prev.some((e) => e.id === event.id)) return prev
         return [...prev, event].slice(-30)
@@ -23,7 +24,7 @@ function MapContent() {
     })
 
     return () => { unsub() }
-  }, [map])
+  }, [map, filters])
 
   return (
     <>
@@ -36,7 +37,11 @@ function MapContent() {
   )
 }
 
-export function ThreatMap() {
+interface ThreatMapProps {
+  filters: Filters
+}
+
+export function ThreatMap({ filters }: ThreatMapProps) {
   return (
     <MapContainer
       center={[25, 20]}
@@ -45,7 +50,7 @@ export function ThreatMap() {
       zoomControl={false}
       attributionControl={false}
     >
-      <MapContent />
+      <MapContent filters={filters} />
     </MapContainer>
   )
 }

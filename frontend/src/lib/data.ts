@@ -1,7 +1,24 @@
-import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, Exploit, RssResult } from '../types'
+import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, Exploit, RssResult, Filters } from '../types'
+
+export function matchesFilters(e: AttackEvent, f: Filters): boolean {
+  if (f.severity && f.severity !== 'all' && e.severity !== f.severity) return false
+  if (f.attack_type && f.attack_type !== 'all' && e.attack_type !== f.attack_type) return false
+  if (f.source_country && f.source_country !== 'all' && e.source_country !== f.source_country) return false
+  return true
+}
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
+function toParams(f?: Partial<Filters>): string {
+  if (!f) return ''
+  const p = new URLSearchParams()
+  if (f.severity && f.severity !== 'all') p.set('severity', f.severity)
+  if (f.attack_type && f.attack_type !== 'all') p.set('attack_type', f.attack_type)
+  if (f.source_country && f.source_country !== 'all') p.set('source_country', f.source_country)
+  const s = p.toString()
+  return s ? `&${s}` : ''
+}
 
 async function api<T>(path: string): Promise<T> {
   const res = await fetch(`${API_URL}${path}`)
@@ -13,8 +30,13 @@ export async function getEventCounts(): Promise<EventCounts> {
   return api<EventCounts>('/api/counts')
 }
 
-export async function getEvents(limit = 50): Promise<AttackEvent[]> {
-  return api<AttackEvent[]>(`/api/events?limit=${limit}`)
+export async function getEvents(limit = 50, filters?: Partial<Filters>): Promise<AttackEvent[]> {
+  return api<AttackEvent[]>(`/api/events?limit=${limit}${toParams(filters)}`)
+}
+
+export async function getCountries(): Promise<string[]> {
+  const data = await api<{ source_country: string }[]>('/api/countries')
+  return data.map((d) => d.source_country).sort()
 }
 
 export async function getTopCountries(): Promise<TopCountry[]> {
@@ -73,7 +95,8 @@ export function onNewEvent(callback: (event: AttackEvent) => void): () => void {
   return () => {
     closed = true
     if (retryTimeout) clearTimeout(retryTimeout)
-    if (ws && ws.readyState === WebSocket.OPEN) {
+    if (ws) {
+      ws.onclose = null
       ws.close()
     }
   }
