@@ -14,10 +14,7 @@
 
 - **Monorepo** with `frontend/` (React 18 + Vite + Tailwind) and `server/` (Express + better-sqlite3 + WebSocket).
 - Root `package.json` orchestrates both via `concurrently`.
-- **Two data backends** — switched by `VITE_USE_LOCAL` env var:
-  - `true` (default in `frontend/.env`): local server at `localhost:3001`
-  - otherwise: Supabase (dynamic import via `frontend/src/lib/supabase.ts`)
-- **Unified data layer**: all components import from `frontend/src/lib/data.ts`, never from `supabase` directly.
+- **Data layer**: `frontend/src/lib/data.ts` connects to local server at `localhost:3001` via REST + WebSocket.
 
 ## Server (`server/src/`)
 
@@ -32,7 +29,7 @@
 ## Frontend (`frontend/src/`)
 
 - **App layout**: Header → main-area with absolute-positioned map wrapper + panel overlay. `panel-overlay` uses `z-index: 10` to stack above Leaflet tiles.
-- **ThreatMap**: Leaflet with CartoDB dark tiles. Must import `leaflet/dist/leaflet.css` (component-level). Calls `map.invalidateSize()` on mount via timeout. Uses canvas-based ArcLayer (static arcs, gentle pulse, 20s lifetime, no projectiles).
+- **ThreatMap**: Leaflet with CartoDB dark tiles. Must import `leaflet/dist/leaflet.css` (component-level). Calls `map.invalidateSize()` on mount via timeout. Uses canvas-based ArcLayer (static arcs, gentle pulse, 30s lifetime, no projectiles).
 - **ThreatFeed**: max 20 items, newest first, first item always full opacity, older items fade out after 15s, fully gone at 35s. 1s tick for live opacity/time-ago updates.
 - **StatsPanel**: Top Countries, Severity distribution, SANS Feed Ports (from `/api/feed-ports`). Removed simulated top ports. Reloads all data on each new event.
 - **Header**: rolling events/h counter (timestamps kept in a ref, filtered every 1s).
@@ -40,9 +37,7 @@
 
 ## Gotchas
 
-- **Tests mock `../lib/supabase`**, but components now import from `../lib/data` — tests are currently broken (wrong module mocked).
 - **React StrictMode** double-invokes effects in dev (WebSocket close warning is harmless; fixed by only closing on `OPEN`).
 - **Node.js**: server runs on v18 (CI uses v20).
 - **`.gitignore`** ignores `server/data/` (SQLite DB files). DB auto-recreated on server start if missing.
-- **`backend/` directory** is legacy (old Supabase CI simulator) — not part of current local architecture.
 - **Leaflet CSS** must be imported at component level (in `ThreatMap.tsx`), not in `main.tsx`.

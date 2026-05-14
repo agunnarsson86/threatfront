@@ -38,21 +38,10 @@ const MOCK_EVENTS = vi.hoisted(() => [
   },
 ] as AttackEvent[])
 
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        order: vi.fn(() => ({
-          limit: vi.fn(() => Promise.resolve({ data: MOCK_EVENTS })),
-        })),
-      })),
-    })),
-    channel: vi.fn(() => ({
-      on: vi.fn().mockReturnThis(),
-      subscribe: vi.fn(),
-    })),
-    removeChannel: vi.fn(),
-  },
+vi.mock('../lib/data', () => ({
+  getEvents: vi.fn(() => Promise.resolve(MOCK_EVENTS)),
+  getFeedPorts: vi.fn(() => Promise.resolve([])),
+  onNewEvent: vi.fn(() => vi.fn()),
 }))
 
 describe('ThreatFeed', () => {

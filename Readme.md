@@ -34,7 +34,7 @@ threatfront/
 ├── frontend/             React 18 + Vite + Tailwind
 │   └── src/
 │       ├── components/   Header, ThreatMap, ThreatFeed, StatsPanel, RssFeed
-│       └── lib/data.ts   Unified data layer (local server or Supabase)
+│       └── lib/data.ts   Data layer (local server via REST)
 ├── AGENTS.md             OpenCode instructions
 └── NOTES.md              Integration ideas (HAProxy WAF, etc.)
 ```
@@ -43,11 +43,8 @@ threatfront/
 
 | Variable | Default | Description |
 |---|---|---|
-| `VITE_USE_LOCAL` | `true` | Set to `false` for Supabase mode |
 | `VITE_API_URL` | `http://localhost:3001` | Local server URL |
 | `VITE_WS_URL` | `ws://localhost:3001` | WebSocket URL |
-| `VITE_SUPABASE_URL` | — | Supabase project URL |
-| `VITE_SUPABASE_ANON_KEY` | — | Supabase anon key |
 
 ## Data Sources
 

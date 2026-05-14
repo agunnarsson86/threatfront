@@ -20,17 +20,16 @@ const mockData = vi.hoisted(() => ({
   ],
 }))
 
-vi.mock('../lib/supabase', () => ({
-  supabase: {
-    from: vi.fn((table: string) => ({
-      select: vi.fn(() => Promise.resolve({ data: mockData[table as keyof typeof mockData] || [] })),
-    })),
-    channel: vi.fn(() => ({
-      on: vi.fn().mockReturnThis(),
-      subscribe: vi.fn(),
-    })),
-    removeChannel: vi.fn(),
-  },
+const mockGet = (table: string) => Promise.resolve(mockData[table as keyof typeof mockData] || [])
+
+vi.mock('../lib/data', () => ({
+  getEventCounts: vi.fn(() => Promise.resolve({ total: 1000, last_24h: 500, last_hour: 50 })),
+  getTopCountries: vi.fn(() => Promise.resolve(mockData.top_countries)),
+  getTopPorts: vi.fn(() => mockGet('top_ports')),
+  getAttackDistribution: vi.fn(() => mockGet('attack_distribution')),
+  getSeverityDistribution: vi.fn(() => mockGet('severity_distribution')),
+  getFeedPorts: vi.fn(() => Promise.resolve([])),
+  onNewEvent: vi.fn(() => vi.fn()),
 }))
 
 describe('StatsPanel', () => {
