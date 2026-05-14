@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
-import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, insertEvent, close } from './db.js'
+import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, insertEvent, close } from './db.js'
 import { generateBatch, generateHistorical } from './simulator.js'
 import { getRandomThreat, getFeedPorts, ensureFeed, startFeedRefresh, getFeedStats } from './threatfeed.js'
 import { fetchRss } from './rss.js'
@@ -40,6 +40,10 @@ app.get('/api/top-ports', (_req, res) => {
 
 app.get('/api/attack-dist', (_req, res) => {
   res.json(getAttackDistribution())
+})
+
+app.get('/api/top-exploits', (_req, res) => {
+  res.json(getTopExploits())
 })
 
 app.get('/api/feed-ports', (_req, res) => {

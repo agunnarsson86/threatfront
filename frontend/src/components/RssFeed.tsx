@@ -81,7 +81,7 @@ export function RssFeed() {
   }
 
   return (
-    <div className="panel flex flex-col overflow-hidden flex-1">
+    <div className="panel h-full flex flex-col overflow-hidden">
       <div className="panel-title">RSS Feeds</div>
       <div className="flex gap-1 mb-1.5">
         <input

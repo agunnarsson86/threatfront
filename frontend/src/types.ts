@@ -30,6 +30,13 @@ export interface AttackDistribution {
   count: number
 }
 
+export interface Exploit {
+  attack_type: string
+  count: number
+  cve_id: string
+  name: string
+}
+
 export interface SeverityDistribution {
   severity: string
   count: number

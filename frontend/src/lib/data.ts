@@ -1,4 +1,4 @@
-import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, RssResult } from '../types'
+import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, Exploit, RssResult } from '../types'
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
@@ -31,6 +31,10 @@ export async function getFeedPorts(): Promise<FeedPort[]> {
 
 export async function getAttackDistribution(): Promise<AttackDistribution[]> {
   return api<AttackDistribution[]>('/api/attack-dist')
+}
+
+export async function getTopExploits(): Promise<Exploit[]> {
+  return api<Exploit[]>('/api/top-exploits')
 }
 
 export async function getSeverityDistribution(): Promise<SeverityDistribution[]> {

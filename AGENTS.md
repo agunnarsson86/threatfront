@@ -38,6 +38,6 @@
 ## Gotchas
 
 - **React StrictMode** double-invokes effects in dev (WebSocket close warning is harmless; fixed by only closing on `OPEN`).
-- **Node.js**: server runs on v18 (CI uses v20).
+- **Node.js**: v22.22.3 LTS (via nvm).
 - **`.gitignore`** ignores `server/data/` (SQLite DB files). DB auto-recreated on server start if missing.
 - **Leaflet CSS** must be imported at component level (in `ThreatMap.tsx`), not in `main.tsx`.

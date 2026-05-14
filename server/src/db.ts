@@ -97,6 +97,33 @@ export function getAttackDistribution() {
   return db.prepare('select attack_type, count(*) as count from events group by attack_type order by count desc').all()
 }
 
+const CVE_MAP: Record<string, { cve_id: string; name: string }> = {
+  'SSH Brute Force': { cve_id: 'CVE-2024-6387', name: 'regreSSHion OpenSSH RCE' },
+  'Port Scan': { cve_id: 'CVE-2024-25153', name: 'Mass Port Scanner Activity' },
+  'Web Exploit': { cve_id: 'CVE-2024-4577', name: 'PHP CGI Argument Injection' },
+  'DDoS': { cve_id: 'CVE-2024-27198', name: 'DDoS Reflection Amplification' },
+  'SQL Injection': { cve_id: 'CVE-2023-3464', name: 'SQLi in Enterprise Apps' },
+  'Malware Delivery': { cve_id: 'CVE-2024-3400', name: 'Malware Payload Delivery' },
+  'RDP Brute Force': { cve_id: 'CVE-2024-38077', name: 'RDP Remote Code Execution' },
+  'DNS Tunneling': { cve_id: 'CVE-2023-50387', name: 'DNS KeyTrap Vulnerability' },
+}
+
+export interface TopExploit {
+  attack_type: string
+  count: number
+  cve_id: string
+  name: string
+}
+
+export function getTopExploits(): TopExploit[] {
+  const db = getDb()
+  const rows = db.prepare('select attack_type, count(*) as count from events group by attack_type order by count desc').all() as { attack_type: string; count: number }[]
+  return rows.map((r) => {
+    const cve = CVE_MAP[r.attack_type] || { cve_id: 'N/A', name: r.attack_type }
+    return { attack_type: r.attack_type, count: r.count, cve_id: cve.cve_id, name: cve.name }
+  }).sort((a, b) => b.count - a.count)
+}
+
 export function getSeverityDistribution() {
   const db = getDb()
   return db.prepare('select severity, count(*) as count from events group by severity order by count desc').all()

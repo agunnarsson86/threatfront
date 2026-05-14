@@ -7,12 +7,9 @@ const mockData = vi.hoisted(() => ({
     { source_country: 'CN', count: 430 },
     { source_country: 'RU', count: 180 },
   ],
-  top_ports: [
+  feed_ports: [
     { port: 22, count: 520 },
     { port: 443, count: 220 },
-  ],
-  attack_distribution: [
-    { attack_type: 'SSH Brute Force', count: 300 },
   ],
   severity_distribution: [
     { severity: 'critical', count: 50 },
@@ -20,15 +17,10 @@ const mockData = vi.hoisted(() => ({
   ],
 }))
 
-const mockGet = (table: string) => Promise.resolve(mockData[table as keyof typeof mockData] || [])
-
 vi.mock('../lib/data', () => ({
-  getEventCounts: vi.fn(() => Promise.resolve({ total: 1000, last_24h: 500, last_hour: 50 })),
   getTopCountries: vi.fn(() => Promise.resolve(mockData.top_countries)),
-  getTopPorts: vi.fn(() => mockGet('top_ports')),
-  getAttackDistribution: vi.fn(() => mockGet('attack_distribution')),
-  getSeverityDistribution: vi.fn(() => mockGet('severity_distribution')),
-  getFeedPorts: vi.fn(() => Promise.resolve([])),
+  getSeverityDistribution: vi.fn(() => Promise.resolve(mockData.severity_distribution)),
+  getFeedPorts: vi.fn(() => Promise.resolve(mockData.feed_ports)),
   onNewEvent: vi.fn(() => vi.fn()),
 }))
 
@@ -40,7 +32,7 @@ describe('StatsPanel', () => {
   it('renders section titles', async () => {
     render(<StatsPanel />)
     expect(screen.getByText('Top Countries')).toBeInTheDocument()
-    expect(screen.getByText('Top Ports')).toBeInTheDocument()
+    expect(screen.getByText('Top Ports (SANS Feed)')).toBeInTheDocument()
   })
 
   it('displays country codes', async () => {
@@ -55,7 +47,7 @@ describe('StatsPanel', () => {
     expect(await screen.findByText('High')).toBeInTheDocument()
   })
 
-  it('displays top ports', async () => {
+  it('displays feed ports', async () => {
     render(<StatsPanel />)
     expect(await screen.findByText('22')).toBeInTheDocument()
     expect(await screen.findByText('443')).toBeInTheDocument()

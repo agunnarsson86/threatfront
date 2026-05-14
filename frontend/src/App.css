@@ -26,9 +26,30 @@
   bottom: 0;
   pointer-events: none;
   display: flex;
+  flex-direction: column;
   padding: 12px;
-  gap: 12px;
+  gap: 8px;
   z-index: 10;
+}
+
+.panel-top-row {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  min-height: 0;
+}
+
+.panel-bottom-row {
+  display: flex;
+  gap: 12px;
+  height: 185px;
+  flex-shrink: 0;
+}
+
+.panel-bottom-left,
+.panel-bottom-right {
+  flex: 1;
+  min-width: 0;
 }
 
 .panel-overlay > * {
