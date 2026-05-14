@@ -3,6 +3,7 @@ import { ThreatMap } from './components/ThreatMap'
 import { ThreatFeed } from './components/ThreatFeed'
 import { StatsPanel } from './components/StatsPanel'
 import { FilterBar } from './components/FilterBar'
+import { RssFeed } from './components/RssFeed'
 import './App.css'
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           </div>
           <div className="panel-right">
             <ThreatFeed />
+            <RssFeed />
           </div>
         </div>
       </div>

@@ -8,25 +8,34 @@ interface ActiveArc {
   activatedAt: number
 }
 
-const ARC_LIFETIME = 20000
-const FADE_IN = 1000
-const FADE_OUT = 4000
+const ARC_HOLD = 20000
+const ARC_FADE = 10000
+const ARC_LIFETIME = ARC_HOLD + ARC_FADE
+const TRAVEL_TIME = 2500
 
 const SEVERITY_COLORS: Record<string, string> = {
-  low: '#00d4ff',
-  medium: '#ffcc00',
-  high: '#ff6600',
-  critical: '#ff0033',
+  low: '#00f7ff',
+  medium: '#ffe600',
+  high: '#ff4400',
+  critical: '#ff0044',
+}
+
+function quadBezier(t: number, p0: number, p1: number, p2: number): number {
+  return (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2
 }
 
 export function ArcLayer({ events }: { events: AttackEvent[] }) {
   const map = useMap()
-  const arcsRef = useRef<ActiveArc[]>([])
+  const arcsRef = useRef<Map<string, ActiveArc>>(new Map())
   const animRef = useRef(0)
 
   useEffect(() => {
     const now = Date.now()
-    arcsRef.current = events.map((event) => ({ event, activatedAt: now })).slice(-30)
+    for (const event of events) {
+      if (!arcsRef.current.has(event.id)) {
+        arcsRef.current.set(event.id, { event, activatedAt: now })
+      }
+    }
   }, [events])
 
   useEffect(() => {
@@ -64,13 +73,15 @@ export function ArcLayer({ events }: { events: AttackEvent[] }) {
       ctx.scale(dpr, dpr)
 
       const now = Date.now()
-      const active = arcsRef.current.filter((a) => now - a.activatedAt < ARC_LIFETIME)
-      arcsRef.current = active
 
-      for (const arc of active) {
-        const { event, activatedAt } = arc
-        const elapsed = now - activatedAt
+      for (const [id, arc] of arcsRef.current) {
+        const elapsed = now - arc.activatedAt
+        if (elapsed > ARC_LIFETIME) {
+          arcsRef.current.delete(id)
+          continue
+        }
 
+        const { event } = arc
         const from = map.latLngToContainerPoint(L.latLng(event.source_lat, event.source_lon))
         const to = map.latLngToContainerPoint(L.latLng(event.target_lat, event.target_lon))
 
@@ -85,46 +96,71 @@ export function ArcLayer({ events }: { events: AttackEvent[] }) {
         const cpX = midX + Math.cos(angle + Math.PI / 2) * elevation
         const cpY = midY + Math.sin(angle + Math.PI / 2) * elevation
 
-        let alpha: number
-        if (elapsed < FADE_IN) {
-          alpha = elapsed / FADE_IN
-        } else if (elapsed < ARC_LIFETIME - FADE_OUT) {
-          alpha = 1
+        let arcAlpha: number
+        if (elapsed < TRAVEL_TIME) {
+          arcAlpha = elapsed / TRAVEL_TIME
+        } else if (elapsed < ARC_HOLD) {
+          arcAlpha = 1
         } else {
-          alpha = Math.max(0, (ARC_LIFETIME - elapsed) / FADE_OUT)
+          arcAlpha = Math.max(0, 1 - (elapsed - ARC_HOLD) / ARC_FADE)
         }
 
-        const pulse = 0.6 + 0.4 * Math.sin(now * 0.0008 + activatedAt * 0.002)
-
         const color = SEVERITY_COLORS[event.severity] || '#00d4ff'
-        const lineW = event.severity === 'critical' ? 1.5 : 1
+        const isCritical = event.severity === 'critical'
 
         ctx.beginPath()
         ctx.moveTo(from.x, from.y)
         ctx.quadraticCurveTo(cpX, cpY, to.x, to.y)
         ctx.strokeStyle = color
-        ctx.lineWidth = lineW
-        ctx.globalAlpha = alpha * 0.15
+        ctx.lineWidth = isCritical ? 2 : 1.2
+        ctx.globalAlpha = arcAlpha * 0.35
         ctx.stroke()
 
-        ctx.beginPath()
-        ctx.arc(from.x, from.y, 4, 0, Math.PI * 2)
-        ctx.fillStyle = color
-        ctx.globalAlpha = alpha * 0.45 * pulse
-        ctx.fill()
+        const travelT = Math.min(elapsed / TRAVEL_TIME, 1)
+        const bx = quadBezier(travelT, from.x, cpX, to.x)
+        const by = quadBezier(travelT, from.y, cpY, to.y)
+
+        const pulse = 0.7 + 0.3 * Math.sin(now * 0.001 + arc.activatedAt * 0.003)
+        const srcGlow = isCritical ? 8 : 6
+        const srcDot = isCritical ? 5 : 4
 
         ctx.beginPath()
-        ctx.arc(from.x, from.y, 7, 0, Math.PI * 2)
+        ctx.arc(from.x, from.y, srcGlow, 0, Math.PI * 2)
         ctx.strokeStyle = color
-        ctx.lineWidth = 1
-        ctx.globalAlpha = alpha * 0.12 * pulse
+        ctx.lineWidth = 1.2
+        ctx.globalAlpha = arcAlpha * 0.18 * pulse
         ctx.stroke()
 
         ctx.beginPath()
-        ctx.arc(to.x, to.y, 2, 0, Math.PI * 2)
+        ctx.arc(from.x, from.y, srcDot, 0, Math.PI * 2)
         ctx.fillStyle = color
-        ctx.globalAlpha = alpha * 0.25
+        ctx.globalAlpha = arcAlpha * 0.6 * pulse
         ctx.fill()
+
+        ctx.beginPath()
+        ctx.arc(to.x, to.y, 2.5, 0, Math.PI * 2)
+        ctx.fillStyle = color
+        ctx.globalAlpha = arcAlpha * 0.35
+        ctx.fill()
+
+        if (elapsed < TRAVEL_TIME) {
+          ctx.beginPath()
+          ctx.arc(bx, by, 6, 0, Math.PI * 2)
+          ctx.fillStyle = '#ffffff'
+          ctx.globalAlpha = 1
+          ctx.shadowBlur = 22
+          ctx.shadowColor = color
+          ctx.fill()
+
+          ctx.beginPath()
+          ctx.arc(bx, by, 3.5, 0, Math.PI * 2)
+          ctx.fillStyle = color
+          ctx.globalAlpha = 0.8
+          ctx.shadowBlur = 0
+          ctx.fill()
+        } else {
+          ctx.shadowBlur = 0
+        }
 
         ctx.globalAlpha = 1
       }

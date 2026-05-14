@@ -47,6 +47,18 @@ export interface EventCounts {
   last_hour: number
 }
 
+export interface RssItem {
+  title: string
+  link: string
+  pubDate: string
+  description: string
+}
+
+export interface RssResult {
+  title: string
+  items: RssItem[]
+}
+
 export interface Filters {
   severity: string | null
   source_country: string | null

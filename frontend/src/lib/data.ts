@@ -1,4 +1,4 @@
-import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution } from '../types'
+import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, RssResult } from '../types'
 
 const USE_LOCAL = import.meta.env.VITE_USE_LOCAL === 'true'
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
@@ -61,6 +61,19 @@ export async function getAttackDistribution(): Promise<AttackDistribution[]> {
 export async function getSeverityDistribution(): Promise<SeverityDistribution[]> {
   if (USE_LOCAL) return api<SeverityDistribution[]>('/api/severity-dist')
   return supabaseQuery<SeverityDistribution>('severity_distribution')
+}
+
+export async function fetchRss(url: string): Promise<RssResult> {
+  if (USE_LOCAL) {
+    const res = await fetch(`${API_URL}/api/rss/fetch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    })
+    if (!res.ok) throw new Error(`RSS error: ${res.status}`)
+    return res.json()
+  }
+  throw new Error('RSS only available in local mode')
 }
 
 export function onNewEvent(callback: (event: AttackEvent) => void): () => void {

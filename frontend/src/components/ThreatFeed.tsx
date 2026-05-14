@@ -3,10 +3,22 @@ import { getEvents, onNewEvent } from '../lib/data'
 import type { AttackEvent } from '../types'
 
 const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  critical: { label: 'CRIT', color: '#ff0033', bg: 'rgba(255,0,51,0.12)' },
-  high: { label: 'HIGH', color: '#ff6600', bg: 'rgba(255,102,0,0.12)' },
-  medium: { label: 'MED', color: '#ffcc00', bg: 'rgba(255,204,0,0.08)' },
-  low: { label: 'LOW', color: '#00d4ff', bg: 'rgba(0,212,255,0.08)' },
+  critical: { label: 'CRIT', color: '#ff0044', bg: 'rgba(255,0,68,0.15)' },
+  high: { label: 'HIGH', color: '#ff4400', bg: 'rgba(255,68,0,0.15)' },
+  medium: { label: 'MED', color: '#ffe600', bg: 'rgba(255,230,0,0.10)' },
+  low: { label: 'LOW', color: '#00f7ff', bg: 'rgba(0,247,255,0.10)' },
+}
+
+function LightningBolt({ color, flash }: { color: string; flash: boolean }) {
+  return (
+    <svg width="16" height="12" viewBox="0 0 16 12" className={`shrink-0 ${flash ? 'animate-pulse-glow' : ''}`}>
+      <path
+        d="M2,10 L7,2 L9,5 L14,1 L11,7 L9,4 L4,11 Z"
+        fill={color}
+        opacity={0.9}
+      />
+    </svg>
+  )
 }
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -17,6 +29,7 @@ const COUNTRY_FLAGS: Record<string, string> = {
 export function ThreatFeed() {
   const [events, setEvents] = useState<AttackEvent[]>([])
   const [tick, setTick] = useState(0)
+  const [flashIds, setFlashIds] = useState<Set<string>>(new Set())
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -28,6 +41,14 @@ export function ThreatFeed() {
         if (prev.some((e) => e.id === newEvent.id)) return prev
         return [newEvent, ...prev].slice(0, 20)
       })
+      setFlashIds((prev) => new Set(prev).add(newEvent.id))
+      setTimeout(() => {
+        setFlashIds((prev) => {
+          const next = new Set(prev)
+          next.delete(newEvent.id)
+          return next
+        })
+      }, 1000)
     })
 
     return () => { clearInterval(ticker); unsub() }
@@ -39,7 +60,7 @@ export function ThreatFeed() {
     }
   }, [events.length])
 
-  const fadeStart = 15
+  const fadeStart = 30
 
   function timeAgo(timestamp: string): string {
     const sec = Math.floor((Date.now() - new Date(timestamp).getTime()) / 1000)
@@ -56,7 +77,7 @@ export function ThreatFeed() {
   }
 
   return (
-    <div className="panel flex-1 overflow-hidden flex flex-col">
+    <div className="panel overflow-hidden flex flex-col flex-1">
       <div className="panel-title flex items-center justify-between">
         <span>Live Feed</span>
         <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-glow" />
@@ -78,10 +99,10 @@ export function ThreatFeed() {
                 {sev.label}
               </span>
               <span className="text-white/70 truncate min-w-0 shrink">{e.attack_type}</span>
-              <span className="text-white/30 shrink-0">
-                {COUNTRY_FLAGS[e.source_country] || e.source_country}
-                {' → '}
-                {COUNTRY_FLAGS[e.target_country] || e.target_country}
+              <span className="inline-flex items-center gap-1 shrink-0">
+                <span className="text-white/30">{COUNTRY_FLAGS[e.source_country] || e.source_country}</span>
+                <LightningBolt color={sev.color} flash={flashIds.has(e.id)} />
+                <span className="text-white/30">{COUNTRY_FLAGS[e.target_country] || e.target_country}</span>
               </span>
               <span className="text-white/20 shrink-0">:{e.port}</span>
               <span className="text-white/20 ml-auto shrink-0 whitespace-nowrap">{timeAgo(e.timestamp)}</span>

@@ -5,6 +5,7 @@ import { WebSocketServer, WebSocket } from 'ws'
 import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, insertEvent, close } from './db.js'
 import { generateBatch, generateHistorical } from './simulator.js'
 import { getRandomThreat, getFeedPorts, ensureFeed, startFeedRefresh, getFeedStats } from './threatfeed.js'
+import { fetchRss } from './rss.js'
 
 const PORT = parseInt(process.env.PORT || '3001', 10)
 const SIM_INTERVAL = parseInt(process.env.SIM_INTERVAL || '3000', 10)
@@ -52,6 +53,17 @@ app.get('/api/severity-dist', (_req, res) => {
 app.get('/api/events', (req, res) => {
   const limit = Math.min(parseInt(req.query.limit as string) || 50, 200)
   res.json(getEvents(limit))
+})
+
+app.post('/api/rss/fetch', async (req, res) => {
+  try {
+    const { url } = req.body
+    if (!url) { res.status(400).json({ error: 'missing url' }); return }
+    const result = await fetchRss(url)
+    res.json(result)
+  } catch (err: any) {
+    res.status(500).json({ error: err.message })
+  }
 })
 
 app.post('/api/seed', (_req, res) => {
