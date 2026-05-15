@@ -53,6 +53,10 @@
 }
 
 .panel-overlay > * {
+  pointer-events: none;
+}
+
+.panel {
   pointer-events: auto;
 }
 

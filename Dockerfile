@@ -9,10 +9,9 @@ FROM node:22-alpine
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
-COPY server/package.json server/package-lock.json ./server/
-RUN npm ci --prefix server
-
 COPY server/ ./server/
+RUN npm ci --prefix server && npm rebuild --prefix server better-sqlite3 --build-from-source
+
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 
 EXPOSE 3001
