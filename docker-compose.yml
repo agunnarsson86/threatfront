@@ -1,0 +1,14 @@
+services:
+  threatfront:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - SERVE_STATIC=true
+    volumes:
+      - threatfront-data:/app/server/data
+    restart: unless-stopped
+
+volumes:
+  threatfront-data:

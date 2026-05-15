@@ -1,3 +1,5 @@
+import path from 'path'
+import { fileURLToPath } from 'url'
 import express from 'express'
 import cors from 'cors'
 import http from 'http'
@@ -115,6 +117,16 @@ function runSimulator() {
     broadcast({ type: 'new_event', event: e })
   }
   console.log(`[sim] Inserted ${events.length} events`)
+}
+
+if (process.env.SERVE_STATIC === 'true') {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url))
+  const staticDir = path.resolve(__dirname, '..', '..', 'frontend', 'dist')
+  app.use(express.static(staticDir))
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(staticDir, 'index.html'))
+  })
+  console.log(`[server] Serving static files from ${staticDir}`)
 }
 
 server.listen(PORT, async () => {
