@@ -6,6 +6,9 @@ services:
     environment:
       - PORT=3001
       - SERVE_STATIC=true
+      - OPENSEARCH_URL=${OPENSEARCH_URL:-http://localhost:9200}
+      - OPENSEARCH_AUTH=${OPENSEARCH_AUTH:-}
+      - OPENSEARCH_INDEX=${OPENSEARCH_INDEX:-haproxy-waf-*}
     volumes:
       - threatfront-data:/app/server/data
     restart: unless-stopped

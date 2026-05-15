@@ -94,6 +94,11 @@ export function getEvents(limit: number = 50, filters?: { severity?: string; att
   return db.prepare(sql).all(...params)
 }
 
+export function clearEvents() {
+  const db = getDb()
+  db.exec('delete from events')
+}
+
 export function insertEvent(event: any) {
   const db = getDb()
   db.prepare(`

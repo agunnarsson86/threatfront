@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { getCountries, getTargetCountries } from '../lib/data'
+import { getCountries, getTargetCountries, getMode, setMode } from '../lib/data'
 import type { Filters } from '../types'
+import type { Mode } from '../lib/data'
 
 interface Props {
   filters: Filters
   onFilterChange: (f: Filters) => void
+  mode: Mode
+  onModeChange: (m: Mode) => void
 }
 
 const SEVERITIES = ['all', 'critical', 'high', 'medium', 'low']
 const ATTACK_TYPES = ['all', 'SSH Brute Force', 'Port Scan', 'Web Exploit', 'DDoS', 'SQL Injection', 'Malware Delivery', 'DNS Tunneling', 'RDP Brute Force']
 
-export function FilterBar({ filters, onFilterChange }: Props) {
+export function FilterBar({ filters, onFilterChange, mode, onModeChange }: Props) {
   const [countries, setCountries] = useState<string[]>([])
   const [targetCountries, setTargetCountries] = useState<string[]>([])
   const [showMenu, setShowMenu] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    getMode().then(({ mode: m }) => onModeChange(m)).catch(() => {})
     getCountries().then(setCountries).catch(() => {})
     getTargetCountries().then(setTargetCountries).catch(() => {})
   }, [])
@@ -58,6 +62,32 @@ export function FilterBar({ filters, onFilterChange }: Props) {
         </button>
       </div>
       <div className="space-y-3">
+        <div>
+          <label className="text-[10px] text-white/30 uppercase tracking-wider block mb-1.5">Data Source</label>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setMode('sans').then(({ mode: m }) => onModeChange(m)).catch(() => {})}
+              className={`text-[10px] px-2 py-1 rounded transition-colors uppercase tracking-wider ${
+                mode === 'sans'
+                  ? 'bg-accent-cyan/20 text-accent-cyan'
+                  : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80'
+              }`}
+            >
+              SANS
+            </button>
+            <button
+              onClick={() => setMode('opensearch').then(({ mode: m }) => onModeChange(m)).catch(() => {})}
+              className={`text-[10px] px-2 py-1 rounded transition-colors uppercase tracking-wider ${
+                mode === 'opensearch'
+                  ? 'bg-accent-cyan/20 text-accent-cyan'
+                  : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80'
+              }`}
+            >
+              WAF
+            </button>
+          </div>
+        </div>
+
         <div>
           <label className="text-[10px] text-white/30 uppercase tracking-wider block mb-1.5">Severity</label>
           <div className="flex gap-1">

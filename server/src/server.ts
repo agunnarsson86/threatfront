@@ -4,10 +4,11 @@ import express from 'express'
 import cors from 'cors'
 import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
-import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, getDistinctCountries, getDistinctTargetCountries, insertEvent, close } from './db.js'
+import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, getDistinctCountries, getDistinctTargetCountries, insertEvent, close, clearEvents } from './db.js'
 import { generateBatch, generateHistorical } from './simulator.js'
 import { getRandomThreat, getFeedPorts, ensureFeed, startFeedRefresh, getFeedStats } from './threatfeed.js'
 import { fetchRss } from './rss.js'
+import * as opensearch from './opensearch.js'
 
 const PORT = parseInt(process.env.PORT || '3001', 10)
 const SIM_INTERVAL = parseInt(process.env.SIM_INTERVAL || '3000', 10)
@@ -27,6 +28,87 @@ function broadcast(data: unknown) {
     }
   })
 }
+
+let currentMode: 'sans' | 'opensearch' = 'sans'
+let simTimer: ReturnType<typeof setInterval> | null = null
+
+function insertAndBroadcast(event: any) {
+  insertEvent(event)
+  broadcast({ type: 'new_event', event })
+}
+
+function runSimulator() {
+  const events = generateBatch(getRandomThreat)
+  const insert = getDb().prepare(`
+    insert into events (id, timestamp, source_ip, source_country, source_lat, source_lon, target_ip, target_country, target_lat, target_lon, port, protocol, attack_type, severity)
+    values (@id, @timestamp, @source_ip, @source_country, @source_lat, @source_lon, @target_ip, @target_country, @target_lat, @target_lon, @port, @protocol, @attack_type, @severity)
+  `)
+  const tx = getDb().transaction(() => {
+    for (const e of events) {
+      insert.run(e)
+    }
+  })
+  tx()
+  for (const e of events) {
+    broadcast({ type: 'new_event', event: e })
+  }
+  console.log(`[sim] Inserted ${events.length} events`)
+}
+
+function startSans() {
+  stopCurrentSource()
+  console.log('[mode] Starting SANS+simulator')
+  currentMode = 'sans'
+  simTimer = setInterval(runSimulator, SIM_INTERVAL)
+}
+
+function startOpensearch() {
+  stopCurrentSource()
+  console.log('[mode] Starting OpenSearch poller')
+  currentMode = 'opensearch'
+  opensearch.start((events) => {
+    for (const e of events) {
+      insertAndBroadcast(e)
+    }
+    console.log(`[opensearch] Inserted ${events.length} events`)
+  })
+}
+
+function stopCurrentSource() {
+  if (currentMode === 'sans' && simTimer) {
+    clearInterval(simTimer)
+    simTimer = null
+  }
+  if (currentMode === 'opensearch') {
+    opensearch.stop()
+  }
+}
+
+function switchMode(mode: 'sans' | 'opensearch') {
+  if (mode === currentMode) return
+  stopCurrentSource()
+  clearEvents()
+  if (mode === 'sans') {
+    startSans()
+  } else {
+    startOpensearch()
+  }
+  broadcast({ type: 'mode_changed', mode })
+}
+
+app.get('/api/mode', (_req, res) => {
+  res.json({ mode: currentMode })
+})
+
+app.post('/api/mode', (req, res) => {
+  const { mode } = req.body
+  if (mode !== 'sans' && mode !== 'opensearch') {
+    res.status(400).json({ error: 'mode must be sans or opensearch' })
+    return
+  }
+  switchMode(mode)
+  res.json({ mode: currentMode })
+})
 
 app.get('/api/counts', (_req, res) => {
   res.json(getEventCounts())
@@ -101,24 +183,6 @@ app.post('/api/seed', (_req, res) => {
   res.json({ seeded: events.length })
 })
 
-function runSimulator() {
-  const events = generateBatch(getRandomThreat)
-  const insert = getDb().prepare(`
-    insert into events (id, timestamp, source_ip, source_country, source_lat, source_lon, target_ip, target_country, target_lat, target_lon, port, protocol, attack_type, severity)
-    values (@id, @timestamp, @source_ip, @source_country, @source_lat, @source_lon, @target_ip, @target_country, @target_lat, @target_lon, @port, @protocol, @attack_type, @severity)
-  `)
-  const tx = getDb().transaction(() => {
-    for (const e of events) {
-      insert.run(e)
-    }
-  })
-  tx()
-  for (const e of events) {
-    broadcast({ type: 'new_event', event: e })
-  }
-  console.log(`[sim] Inserted ${events.length} events`)
-}
-
 if (process.env.SERVE_STATIC === 'true') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url))
   const staticDir = path.resolve(__dirname, '..', '..', 'frontend', 'dist')
@@ -154,7 +218,7 @@ server.listen(PORT, async () => {
     console.log(`Seeded ${events.length} historical events`)
   }
 
-  setInterval(runSimulator, SIM_INTERVAL)
+  startSans()
 })
 
 process.on('SIGINT', () => { close(); process.exit(0) })

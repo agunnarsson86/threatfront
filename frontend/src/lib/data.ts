@@ -22,10 +22,24 @@ function toParams(f?: Partial<Filters>): string {
   return s ? `&${s}` : ''
 }
 
-async function api<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`)
+async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, init)
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   return res.json()
+}
+
+export type Mode = 'sans' | 'opensearch'
+
+export async function getMode(): Promise<{ mode: Mode }> {
+  return api<{ mode: Mode }>('/api/mode')
+}
+
+export async function setMode(mode: Mode): Promise<{ mode: Mode }> {
+  return api<{ mode: Mode }>('/api/mode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode }),
+  })
 }
 
 export async function getEventCounts(): Promise<EventCounts> {

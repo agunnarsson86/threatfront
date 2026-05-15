@@ -2,8 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { Shield, Activity, Clock } from 'lucide-react'
 import { getEventCounts, onNewEvent } from '../lib/data'
 import type { EventCounts } from '../types'
+import type { Mode } from '../lib/data'
 
-export function Header() {
+interface Props {
+  mode: Mode
+  onModeChange: (m: Mode) => void
+}
+
+export function Header({ mode }: Props) {
   const [counts, setCounts] = useState<EventCounts>({ total: 0, last_24h: 0, last_hour: 0 })
   const [eventsPerHour, setEventsPerHour] = useState(0)
   const hourTimestamps = useRef<number[]>([])
@@ -35,7 +41,9 @@ export function Header() {
         <h1 className="text-sm font-bold tracking-widest text-white/90">
           THREATFRONT
         </h1>
-        <span className="text-[10px] text-white/20 tracking-wider uppercase ml-2">Live</span>
+        <span className="text-[10px] text-white/20 tracking-wider uppercase ml-2">
+          {mode === 'sans' ? 'SANS Live' : 'WAF Live'}
+        </span>
       </div>
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-2 text-xs">
