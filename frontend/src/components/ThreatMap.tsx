@@ -75,6 +75,7 @@ export function ThreatMap({ filters }: ThreatMapProps) {
       center={[25, 20]}
       zoom={2}
       className="w-full h-full"
+      zoomControl={false}
       attributionControl={false}
     >
       <MapContent filters={filters} />
