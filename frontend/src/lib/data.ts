@@ -1,4 +1,4 @@
-import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, Exploit, RssResult, Filters } from '../types'
+import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, Exploit, RssResult, Filters, Mode } from '../types'
 
 export function matchesFilters(e: AttackEvent, f: Filters): boolean {
   if (f.severity && f.severity !== 'all' && e.severity !== f.severity) return false
@@ -27,8 +27,6 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) throw new Error(`API error: ${res.status}`)
   return res.json()
 }
-
-export type Mode = 'sans' | 'opensearch'
 
 export async function getMode(): Promise<{ mode: Mode }> {
   return api<{ mode: Mode }>('/api/mode')
@@ -94,31 +92,64 @@ export async function fetchRss(url: string): Promise<RssResult> {
   return res.json()
 }
 
-export function onNewEvent(callback: (event: AttackEvent) => void): () => void {
-  let ws: WebSocket | null = null
-  let retryTimeout: ReturnType<typeof setTimeout> | null = null
-  let closed = false
+type WsCallback = (e: AttackEvent) => void
+type ModeCallback = (mode: Mode) => void
 
-  function connect() {
-    if (closed) return
-    ws = new WebSocket(WS_URL)
-    ws.onopen = () => { /* connected */ }
-    ws.onmessage = (msg) => {
-      try {
-        const data = JSON.parse(msg.data)
-        if (data.type === 'new_event') callback(data.event as AttackEvent)
-      } catch { /* ignore */ }
-    }
-    ws.onclose = () => { if (!closed) retryTimeout = setTimeout(connect, 2000) }
+let sharedWs: WebSocket | null = null
+let wsRefCount = 0
+let wsRetryTimeout: ReturnType<typeof setTimeout> | null = null
+let wsClosed = false
+const eventListeners = new Set<WsCallback>()
+const modeListeners = new Set<ModeCallback>()
+
+function connectSharedWs() {
+  if (wsClosed) return
+  sharedWs = new WebSocket(WS_URL)
+  sharedWs.onopen = () => { /* connected */ }
+  sharedWs.onerror = () => { /* ignore */ }
+  sharedWs.onmessage = (msg) => {
+    try {
+      const data = JSON.parse(msg.data)
+      if (data.type === 'new_event') {
+        for (const cb of eventListeners) cb(data.event as AttackEvent)
+      } else if (data.type === 'mode_changed') {
+        for (const cb of modeListeners) cb(data.mode as Mode)
+      }
+    } catch { /* ignore */ }
   }
+  sharedWs.onclose = () => {
+    if (!wsClosed) wsRetryTimeout = setTimeout(connectSharedWs, 2000)
+  }
+}
 
-  connect()
+function disconnectSharedWs() {
+  wsClosed = true
+  if (wsRetryTimeout) clearTimeout(wsRetryTimeout)
+  if (sharedWs) {
+    sharedWs.onclose = null
+    sharedWs.close()
+    sharedWs = null
+  }
+}
+
+export function onNewEvent(callback: WsCallback): () => void {
+  eventListeners.add(callback)
+  if (!sharedWs) connectSharedWs()
+  wsRefCount++
   return () => {
-    closed = true
-    if (retryTimeout) clearTimeout(retryTimeout)
-    if (ws) {
-      ws.onclose = null
-      ws.close()
-    }
+    eventListeners.delete(callback)
+    wsRefCount--
+    if (wsRefCount === 0) disconnectSharedWs()
+  }
+}
+
+export function onModeChanged(callback: ModeCallback): () => void {
+  modeListeners.add(callback)
+  if (!sharedWs) connectSharedWs()
+  wsRefCount++
+  return () => {
+    modeListeners.delete(callback)
+    wsRefCount--
+    if (wsRefCount === 0) disconnectSharedWs()
   }
 }

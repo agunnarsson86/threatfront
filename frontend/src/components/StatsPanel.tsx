@@ -1,18 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getTopCountries, getFeedPorts, getSeverityDistribution, onNewEvent } from '../lib/data'
 import type { TopCountry, FeedPort, SeverityDistribution } from '../types'
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  CN: '🇨🇳', RU: '🇷🇺', US: '🇺🇸', KP: '🇰🇵', IR: '🇮🇷',
-  BR: '🇧🇷', IN: '🇮🇳', VN: '🇻🇳', NG: '🇳🇬', SE: '🇸🇪',
-}
-
-const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ff0033',
-  high: '#ff6600',
-  medium: '#ffcc00',
-  low: '#00d4ff',
-}
+import { COUNTRY_FLAGS, SEVERITY_COLORS } from '../types'
 
 const SEVERITY_NAMES: Record<string, string> = {
   critical: 'Crit',
@@ -25,6 +14,7 @@ export function StatsPanel() {
   const [topCountries, setTopCountries] = useState<TopCountry[]>([])
   const [severityDist, setSeverityDist] = useState<SeverityDistribution[]>([])
   const [feedPorts, setFeedPorts] = useState<FeedPort[]>([])
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     async function load() {
@@ -39,9 +29,15 @@ export function StatsPanel() {
     }
     load()
 
-    const unsub = onNewEvent(load)
+    const unsub = onNewEvent(() => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(load, 2000)
+    })
 
-    return () => { unsub() }
+    return () => {
+      unsub()
+      clearTimeout(debounceRef.current)
+    }
   }, [])
 
   const totalSeverity = severityDist.reduce((s, d) => s + d.count, 0) || 1

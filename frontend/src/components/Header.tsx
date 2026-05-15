@@ -1,12 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Shield, Activity, Clock } from 'lucide-react'
 import { getEventCounts, onNewEvent } from '../lib/data'
-import type { EventCounts } from '../types'
-import type { Mode } from '../lib/data'
+import type { EventCounts, Mode } from '../types'
 
 interface Props {
   mode: Mode
-  onModeChange: (m: Mode) => void
 }
 
 export function Header({ mode }: Props) {

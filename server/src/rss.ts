@@ -19,7 +19,17 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').trim()
 }
 
+function isValidUrl(url: string): boolean {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'http:' || u.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
 export async function fetchRss(url: string): Promise<RssResult> {
+  if (!isValidUrl(url)) throw new Error('Invalid URL')
   const res = await fetch(url, {
     headers: { 'User-Agent': 'threatfront-rss/1.0' },
     signal: AbortSignal.timeout(10000),

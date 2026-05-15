@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
-import { getEvents, onNewEvent, matchesFilters } from '../lib/data'
+import { onNewEvent, matchesFilters } from '../lib/data'
 import type { AttackEvent, Filters } from '../types'
 import { ArcLayer } from './ArcLayer'
 

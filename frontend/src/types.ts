@@ -72,3 +72,24 @@ export interface Filters {
   attack_type: string
   target_country: string
 }
+
+export type Mode = 'sans' | 'opensearch'
+
+export const COUNTRY_FLAGS: Record<string, string> = {
+  CN: '🇨🇳', RU: '🇷🇺', US: '🇺🇸', KP: '🇰🇵', IR: '🇮🇷',
+  BR: '🇧🇷', IN: '🇮🇳', VN: '🇻🇳', NG: '🇳🇬', SE: '🇸🇪',
+}
+
+export const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  critical: { label: 'CRIT', color: '#ff0044', bg: 'rgba(255,0,68,0.15)' },
+  high: { label: 'HIGH', color: '#ff4400', bg: 'rgba(255,68,0,0.15)' },
+  medium: { label: 'MED', color: '#ffe600', bg: 'rgba(255,230,0,0.10)' },
+  low: { label: 'LOW', color: '#00f7ff', bg: 'rgba(0,247,255,0.10)' },
+}
+
+export const SEVERITY_COLORS: Record<string, string> = {
+  critical: '#ff0033',
+  high: '#ff6600',
+  medium: '#ffcc00',
+  low: '#00d4ff',
+}

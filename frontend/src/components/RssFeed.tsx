@@ -16,7 +16,7 @@ function loadFeeds(): string[] {
 }
 
 function saveFeeds(urls: string[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(urls))
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(urls)) } catch { /* ignore */ }
 }
 
 async function refreshAll(feeds: SavedFeed[]): Promise<SavedFeed[]> {

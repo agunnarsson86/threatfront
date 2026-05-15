@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import type { AttackEvent } from './simulator.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, '..', 'data', 'threatfront.db')
@@ -45,6 +46,8 @@ function initSchema(db: Database.Database) {
   `)
 }
 
+interface CountRow { total: number; last_24h: number; last_hour: number }
+
 export function close() {
   if (db) {
     db.close()
@@ -65,14 +68,14 @@ export function getEventCounts(): EventCounts {
       sum(case when timestamp > datetime('now', '-24 hours') then 1 else 0 end) as last_24h,
       sum(case when timestamp > datetime('now', '-1 hour') then 1 else 0 end) as last_hour
     from events
-  `).get() as any
+  `).get() as CountRow
   return { total: row.total, last_24h: row.last_24h, last_hour: row.last_hour }
 }
 
 export function getEvents(limit: number = 50, filters?: { severity?: string; attack_type?: string; source_country?: string; target_country?: string }) {
   const db = getDb()
   let sql = 'select * from events where 1=1'
-  const params: any[] = []
+  const params: unknown[] = []
   if (filters?.severity && filters.severity !== 'all') {
     sql += ' and severity = ?'
     params.push(filters.severity)
@@ -99,7 +102,7 @@ export function clearEvents() {
   db.exec('delete from events')
 }
 
-export function insertEvent(event: any) {
+export function insertEvent(event: AttackEvent) {
   const db = getDb()
   db.prepare(`
     insert into events (id, timestamp, source_ip, source_country, source_lat, source_lon, target_ip, target_country, target_lat, target_lon, port, protocol, attack_type, severity)

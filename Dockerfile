@@ -1,16 +1,14 @@
-FROM node:22-alpine AS frontend-builder
+FROM node:22-slim AS frontend-builder
 WORKDIR /build/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
 COPY frontend/ .
 RUN npm run build
 
-FROM node:22-alpine
-RUN apk add --no-cache python3 make g++
-
+FROM node:22-slim
 WORKDIR /app
 COPY server/ ./server/
-RUN npm ci --prefix server && npm rebuild --prefix server better-sqlite3 --build-from-source
+RUN npm ci --prefix server
 
 COPY --from=frontend-builder /build/frontend/dist ./frontend/dist
 

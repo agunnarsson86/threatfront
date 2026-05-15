@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getCountries, getTargetCountries, getMode, setMode } from '../lib/data'
-import type { Filters } from '../types'
-import type { Mode } from '../lib/data'
+import type { Filters, Mode } from '../types'
 
 interface Props {
   filters: Filters

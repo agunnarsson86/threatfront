@@ -1,13 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { getEvents, onNewEvent, matchesFilters } from '../lib/data'
 import type { AttackEvent, Filters } from '../types'
-
-const SEVERITY_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  critical: { label: 'CRIT', color: '#ff0044', bg: 'rgba(255,0,68,0.15)' },
-  high: { label: 'HIGH', color: '#ff4400', bg: 'rgba(255,68,0,0.15)' },
-  medium: { label: 'MED', color: '#ffe600', bg: 'rgba(255,230,0,0.10)' },
-  low: { label: 'LOW', color: '#00f7ff', bg: 'rgba(0,247,255,0.10)' },
-}
+import { SEVERITY_CONFIG, COUNTRY_FLAGS } from '../types'
 
 function Arrow({ color, flash }: { color: string; flash: boolean }) {
   return (
@@ -23,11 +17,6 @@ function Arrow({ color, flash }: { color: string; flash: boolean }) {
       />
     </svg>
   )
-}
-
-const COUNTRY_FLAGS: Record<string, string> = {
-  CN: '🇨🇳', RU: '🇷🇺', US: '🇺🇸', KP: '🇰🇵', IR: '🇮🇷',
-  BR: '🇧🇷', IN: '🇮🇳', VN: '🇻🇳', NG: '🇳🇬', SE: '🇸🇪',
 }
 
 interface Props {

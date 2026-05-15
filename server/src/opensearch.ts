@@ -72,7 +72,7 @@ function mapHit(hit: OpenSearchHit): AttackEvent | null {
 const OPENSEARCH_URL = process.env.OPENSEARCH_URL || 'http://localhost:9200'
 const OPENSEARCH_AUTH = process.env.OPENSEARCH_AUTH || ''
 const OPENSEARCH_INDEX = process.env.OPENSEARCH_INDEX || 'haproxy-waf-*'
-const POLL_INTERVAL = parseInt(process.env.OPENSEARCH_POLL_INTERVAL || '10000', 10)
+const POLL_INTERVAL = (() => { const n = parseInt(process.env.OPENSEARCH_POLL_INTERVAL || '', 10); return isNaN(n) ? 10000 : n })()
 
 let timer: ReturnType<typeof setInterval> | null = null
 let lastTimestamp: string | null = null

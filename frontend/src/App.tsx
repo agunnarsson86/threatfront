@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Header } from './components/Header'
 import { ThreatMap } from './components/ThreatMap'
 import { ThreatFeed } from './components/ThreatFeed'
@@ -6,17 +6,22 @@ import { StatsPanel } from './components/StatsPanel'
 import { ExploitsPanel } from './components/ExploitsPanel'
 import { FilterBar } from './components/FilterBar'
 import { RssFeed } from './components/RssFeed'
-import type { Filters } from './types'
-import type { Mode } from './lib/data'
+import { onModeChanged } from './lib/data'
+import type { Filters, Mode } from './types'
 import './App.css'
 
 export default function App() {
   const [filters, setFilters] = useState<Filters>({ severity: 'all', attack_type: 'all', source_country: 'all', target_country: 'all' })
   const [mode, setMode] = useState<Mode>('sans')
 
+  useEffect(() => {
+    const unsub = onModeChanged((m) => setMode(m))
+    return () => unsub()
+  }, [])
+
   return (
     <div className="app-container">
-      <Header mode={mode} onModeChange={setMode} />
+      <Header mode={mode} />
       <div className="main-area">
         <div className="map-wrapper">
           <ThreatMap filters={filters} />

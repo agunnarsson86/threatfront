@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useMap } from 'react-leaflet'
 import L from 'leaflet'
 import type { AttackEvent } from '../types'
+import { SEVERITY_COLORS } from '../types'
 
 interface ActiveArc {
   event: AttackEvent
@@ -12,13 +13,6 @@ const ARC_HOLD = 30000
 const ARC_FADE = 20000
 const ARC_LIFETIME = ARC_HOLD + ARC_FADE
 const TRAVEL_TIME = 2500
-
-const SEVERITY_COLORS: Record<string, string> = {
-  low: '#00f7ff',
-  medium: '#ffe600',
-  high: '#ff4400',
-  critical: '#ff0044',
-}
 
 function quadBezier(t: number, p0: number, p1: number, p2: number): number {
   return (1 - t) * (1 - t) * p0 + 2 * (1 - t) * t * p1 + t * t * p2

@@ -6,12 +6,18 @@ import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
 import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, getDistinctCountries, getDistinctTargetCountries, insertEvent, close, clearEvents } from './db.js'
 import { generateBatch, generateHistorical } from './simulator.js'
-import { getRandomThreat, getFeedPorts, ensureFeed, startFeedRefresh, getFeedStats } from './threatfeed.js'
+import type { AttackEvent } from './simulator.js'
+import { getRandomThreat, getFeedPorts, ensureFeed, startFeedRefresh } from './threatfeed.js'
 import { fetchRss } from './rss.js'
 import * as opensearch from './opensearch.js'
 
-const PORT = parseInt(process.env.PORT || '3001', 10)
-const SIM_INTERVAL = parseInt(process.env.SIM_INTERVAL || '3000', 10)
+function safeInt(val: string | undefined, def: number): number {
+  const n = parseInt(val || '', 10)
+  return isNaN(n) ? def : n
+}
+
+const PORT = safeInt(process.env.PORT, 3001)
+const SIM_INTERVAL = safeInt(process.env.SIM_INTERVAL, 3000)
 
 const app = express()
 app.use(cors())
@@ -32,11 +38,6 @@ function broadcast(data: unknown) {
 let currentMode: 'sans' | 'opensearch' = 'sans'
 let simTimer: ReturnType<typeof setInterval> | null = null
 
-function insertAndBroadcast(event: any) {
-  insertEvent(event)
-  broadcast({ type: 'new_event', event })
-}
-
 function runSimulator() {
   const events = generateBatch(getRandomThreat)
   const insert = getDb().prepare(`
@@ -55,6 +56,21 @@ function runSimulator() {
   console.log(`[sim] Inserted ${events.length} events`)
 }
 
+function seedHistorical(hours: number, total: number) {
+  const events = generateHistorical(hours, total, getRandomThreat)
+  const insert = getDb().prepare(`
+    insert or ignore into events (id, timestamp, source_ip, source_country, source_lat, source_lon, target_ip, target_country, target_lat, target_lon, port, protocol, attack_type, severity)
+    values (@id, @timestamp, @source_ip, @source_country, @source_lat, @source_lon, @target_ip, @target_country, @target_lat, @target_lon, @port, @protocol, @attack_type, @severity)
+  `)
+  const tx = getDb().transaction(() => {
+    for (const e of events) {
+      insert.run(e)
+    }
+  })
+  tx()
+  return events.length
+}
+
 function startSans() {
   stopCurrentSource()
   console.log('[mode] Starting SANS+simulator')
@@ -66,9 +82,10 @@ function startOpensearch() {
   stopCurrentSource()
   console.log('[mode] Starting OpenSearch poller')
   currentMode = 'opensearch'
-  opensearch.start((events) => {
+  opensearch.start((events: AttackEvent[]) => {
     for (const e of events) {
-      insertAndBroadcast(e)
+      insertEvent(e)
+      broadcast({ type: 'new_event', event: e })
     }
     console.log(`[opensearch] Inserted ${events.length} events`)
   })
@@ -147,7 +164,7 @@ app.get('/api/target-countries', (_req, res) => {
 })
 
 app.get('/api/events', (req, res) => {
-  const limit = Math.min(parseInt(req.query.limit as string) || 50, 200)
+  const limit = Math.min(safeInt(req.query.limit as string, 50), 200)
   const filters = {
     severity: req.query.severity as string | undefined,
     attack_type: req.query.attack_type as string | undefined,
@@ -163,24 +180,15 @@ app.post('/api/rss/fetch', async (req, res) => {
     if (!url) { res.status(400).json({ error: 'missing url' }); return }
     const result = await fetchRss(url)
     res.json(result)
-  } catch (err: any) {
-    res.status(500).json({ error: err.message })
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'unknown error'
+    res.status(500).json({ error: message })
   }
 })
 
 app.post('/api/seed', (_req, res) => {
-  const events = generateHistorical(48, 200, getRandomThreat)
-  const insert = getDb().prepare(`
-    insert or ignore into events (id, timestamp, source_ip, source_country, source_lat, source_lon, target_ip, target_country, target_lat, target_lon, port, protocol, attack_type, severity)
-    values (@id, @timestamp, @source_ip, @source_country, @source_lat, @source_lon, @target_ip, @target_country, @target_lat, @target_lon, @port, @protocol, @attack_type, @severity)
-  `)
-  const tx = getDb().transaction(() => {
-    for (const e of events) {
-      insert.run(e)
-    }
-  })
-  tx()
-  res.json({ seeded: events.length })
+  const count = seedHistorical(48, 200)
+  res.json({ seeded: count })
 })
 
 if (process.env.SERVE_STATIC === 'true') {
@@ -193,6 +201,8 @@ if (process.env.SERVE_STATIC === 'true') {
   console.log(`[server] Serving static files from ${staticDir}`)
 }
 
+interface CountC { c: number }
+
 server.listen(PORT, async () => {
   const url = `http://localhost:${PORT}`
   console.log(`ThreatFront server running at ${url}`)
@@ -202,20 +212,10 @@ server.listen(PORT, async () => {
   startFeedRefresh()
 
   console.log('Seeding historical data...')
-  const count = getDb().prepare('select count(*) as c from events').get() as any
+  const count = getDb().prepare('select count(*) as c from events').get() as CountC
   if (count.c === 0) {
-    const events = generateHistorical(48, 200, getRandomThreat)
-    const insert = getDb().prepare(`
-      insert or ignore into events (id, timestamp, source_ip, source_country, source_lat, source_lon, target_ip, target_country, target_lat, target_lon, port, protocol, attack_type, severity)
-      values (@id, @timestamp, @source_ip, @source_country, @source_lat, @source_lon, @target_ip, @target_country, @target_lat, @target_lon, @port, @protocol, @attack_type, @severity)
-    `)
-    const tx = getDb().transaction(() => {
-      for (const e of events) {
-        insert.run(e)
-      }
-    })
-    tx()
-    console.log(`Seeded ${events.length} historical events`)
+    const seeded = seedHistorical(48, 200)
+    console.log(`Seeded ${seeded} historical events`)
   }
 
   startSans()
