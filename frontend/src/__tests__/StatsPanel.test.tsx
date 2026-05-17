@@ -43,7 +43,7 @@ describe('StatsPanel', () => {
 
   it('displays severity types', async () => {
     render(<StatsPanel />)
-    expect(await screen.findByText('Crit')).toBeInTheDocument()
+    expect(await screen.findByText('Critical')).toBeInTheDocument()
     expect(await screen.findByText('High')).toBeInTheDocument()
   })
 

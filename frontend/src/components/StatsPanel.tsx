@@ -4,9 +4,9 @@ import type { TopCountry, FeedPort, SeverityDistribution } from '../types'
 import { COUNTRY_FLAGS, SEVERITY_COLORS } from '../types'
 
 const SEVERITY_NAMES: Record<string, string> = {
-  critical: 'Crit',
+  critical: 'Critical',
   high: 'High',
-  medium: 'Med',
+  medium: 'Medium',
   low: 'Low',
 }
 
@@ -78,7 +78,7 @@ export function StatsPanel() {
                 className="w-1.5 h-1.5 rounded-full shrink-0"
                 style={{ backgroundColor: SEVERITY_COLORS[d.severity] }}
               />
-              <span className="text-white/50 w-8">{SEVERITY_NAMES[d.severity]}</span>
+              <span className="text-white/50 w-14">{SEVERITY_NAMES[d.severity]}</span>
               <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
