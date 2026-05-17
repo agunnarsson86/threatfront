@@ -4,12 +4,14 @@ import express from 'express'
 import cors from 'cors'
 import http from 'http'
 import { WebSocketServer, WebSocket } from 'ws'
-import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, getDistinctCountries, getDistinctTargetCountries, insertEvent, close, clearEvents } from './db.js'
+import { getDb, getEventCounts, getEvents, getTopCountries, getTopPorts, getAttackDistribution, getSeverityDistribution, getTopExploits, getDistinctCountries, getDistinctTargetCountries, insertEvent, close, clearEvents, setKnownExploited } from './db.js'
 import { generateBatch, generateHistorical } from './simulator.js'
 import type { AttackEvent } from './simulator.js'
 import { getRandomThreat, getFeedPorts, ensureFeed, startFeedRefresh } from './threatfeed.js'
 import { fetchRss } from './rss.js'
 import * as opensearch from './opensearch.js'
+import { enrichCves } from './nvd.js'
+import { ensureKev } from './kev.js'
 
 function safeInt(val: string | undefined, def: number): number {
   const n = parseInt(val || '', 10)
@@ -224,6 +226,25 @@ server.listen(PORT, async () => {
   }
 
   startSans()
+
+  // Enrich CVE data from NVD + CISA KEV (non-blocking)
+  enrichCves(Object.values({
+    'SSH Brute Force': 'CVE-2024-6387',
+    'Port Scan': 'N/A',
+    'Web Exploit': 'CVE-2024-4577',
+    'DDoS': 'CVE-2023-44487',
+    'SQL Injection': 'CVE-2023-34362',
+    'Malware Delivery': 'CVE-2024-3400',
+    'RDP Brute Force': 'CVE-2024-38077',
+    'DNS Tunneling': 'CVE-2023-50387',
+  })).then(() => {
+    console.log('[startup] CVE enrichment done')
+  })
+
+  ensureKev().then((kev) => {
+    setKnownExploited(kev)
+    console.log(`[startup] KEV cross-reference ready (${kev.size} CVEs)`)
+  })
 })
 
 process.on('SIGINT', () => { close(); process.exit(0) })

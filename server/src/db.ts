@@ -43,6 +43,14 @@ function initSchema(db: Database.Database) {
     create index if not exists idx_events_severity on events (severity);
     create index if not exists idx_events_source_country on events (source_country);
     create index if not exists idx_events_attack_type on events (attack_type);
+
+    create table if not exists cve_cache (
+      cve_id text primary key,
+      description text not null default '',
+      severity text not null default '',
+      score real not null default 0,
+      last_updated text not null
+    );
   `)
 }
 
@@ -140,13 +148,20 @@ export function getAttackDistribution() {
 
 const CVE_MAP: Record<string, { cve_id: string; name: string }> = {
   'SSH Brute Force': { cve_id: 'CVE-2024-6387', name: 'regreSSHion OpenSSH RCE' },
-  'Port Scan': { cve_id: 'CVE-2024-25153', name: 'Mass Port Scanner Activity' },
   'Web Exploit': { cve_id: 'CVE-2024-4577', name: 'PHP CGI Argument Injection' },
-  'DDoS': { cve_id: 'CVE-2024-27198', name: 'DDoS Reflection Amplification' },
-  'SQL Injection': { cve_id: 'CVE-2023-3464', name: 'SQLi in Enterprise Apps' },
-  'Malware Delivery': { cve_id: 'CVE-2024-3400', name: 'Malware Payload Delivery' },
-  'RDP Brute Force': { cve_id: 'CVE-2024-38077', name: 'RDP Remote Code Execution' },
+  'DDoS': { cve_id: 'CVE-2023-44487', name: 'HTTP/2 Rapid Reset DDoS' },
+  'SQL Injection': { cve_id: 'CVE-2023-34362', name: 'MOVEit Transfer SQL Injection' },
+  'Malware Delivery': { cve_id: 'CVE-2024-3400', name: 'Palo Alto PAN-OS Command Injection' },
+  'RDP Brute Force': { cve_id: 'CVE-2024-38077', name: 'Windows RDP Licensing RCE' },
   'DNS Tunneling': { cve_id: 'CVE-2023-50387', name: 'DNS KeyTrap Vulnerability' },
+}
+
+export interface CveCacheEntry {
+  cve_id: string
+  description: string
+  severity: string
+  score: number
+  last_updated: string
 }
 
 export interface TopExploit {
@@ -154,6 +169,42 @@ export interface TopExploit {
   count: number
   cve_id: string
   name: string
+  severity: string
+  score: number
+  known_exploited: boolean
+}
+
+export function getCveCache(cveId: string): CveCacheEntry | undefined {
+  const db = getDb()
+  return db.prepare('select * from cve_cache where cve_id = ?').get(cveId) as CveCacheEntry | undefined
+}
+
+export function setCveCache(entry: Omit<CveCacheEntry, 'last_updated'>) {
+  const db = getDb()
+  db.prepare(`
+    insert into cve_cache (cve_id, description, severity, score, last_updated)
+    values (@cve_id, @description, @severity, @score, datetime('now'))
+    on conflict(cve_id) do update set
+      description = excluded.description,
+      severity = excluded.severity,
+      score = excluded.score,
+      last_updated = datetime('now')
+  `).run(entry)
+}
+
+export function getAllCveCache(): CveCacheEntry[] {
+  const db = getDb()
+  return db.prepare('select * from cve_cache').all() as CveCacheEntry[]
+}
+
+let knownExploitedSet: Set<string> | null = null
+
+export function setKnownExploited(cves: Set<string>) {
+  knownExploitedSet = cves
+}
+
+function isKnownExploited(cveId: string): boolean {
+  return knownExploitedSet?.has(cveId) ?? false
 }
 
 export function getTopExploits(): TopExploit[] {
@@ -161,7 +212,16 @@ export function getTopExploits(): TopExploit[] {
   const rows = db.prepare('select attack_type, count(*) as count from events group by attack_type order by count desc').all() as { attack_type: string; count: number }[]
   return rows.map((r) => {
     const cve = CVE_MAP[r.attack_type] || { cve_id: 'N/A', name: r.attack_type }
-    return { attack_type: r.attack_type, count: r.count, cve_id: cve.cve_id, name: cve.name }
+    const cache = cve.cve_id !== 'N/A' ? getCveCache(cve.cve_id) : undefined
+    return {
+      attack_type: r.attack_type,
+      count: r.count,
+      cve_id: cve.cve_id,
+      name: cve.name,
+      severity: cache?.severity ?? '',
+      score: cache?.score ?? 0,
+      known_exploited: isKnownExploited(cve.cve_id),
+    }
   }).sort((a, b) => b.count - a.count)
 }
 

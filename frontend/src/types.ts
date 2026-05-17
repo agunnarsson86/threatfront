@@ -35,6 +35,9 @@ export interface Exploit {
   count: number
   cve_id: string
   name: string
+  severity: string
+  score: number
+  known_exploited: boolean
 }
 
 export interface SeverityDistribution {

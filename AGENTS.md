@@ -19,9 +19,11 @@
 ## Server (`server/src/`)
 
 - **Entry**: `server.ts` — Express on `:3001`, auto-creates SQLite DB in `server/data/`.
-- **Schema** auto-created in `db.ts` with indexes on `timestamp`, `severity`, `source_country`, `attack_type`.
+- **Schema** auto-created in `db.ts` with indexes on `timestamp`, `severity`, `source_country`, `attack_type`, plus `cve_cache` table for NVD-enriched CVE data.
 - **SANS intelfeed** (`threatfeed.ts`): fetches `https://isc.sans.edu/api/intelfeed?json` at startup (~108k entries), refreshes every 15 min. Category-to-attack mapping: `dshieldssh`→SSH(22), `openresolver`→DNS(53), `shodan`→PortScan(22), `talos`/`booter`→DDoS(443), `rdp`→RDP(3389), `miner`→Malware(8080), `mysql`→SQLi(3306), etc.
 - **Simulator** (`simulator.ts`): generates 1-5 events every 3 s using real SANS IPs + mapped attack types. Source countries weighted: CN/RU/US/KP/IR/BR/IN/VN/NG. Target countries weighted: SE/US/DE/GB/JP/FR/AU/CA/NL/SG. Seeded with 200 historical events on first start.
+- **NVD enrichment** (`nvd.ts`): fetches CVE details (description, CVSS severity, CVSS score) from `services.nvd.nist.gov` at startup. Caches results in `cve_cache` SQLite table for 24h.
+- **CISA KEV** (`kev.ts`): fetches `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` at startup. Cross-references with our CVE list → flags as "Known Exploited" in UI.
 - **REST endpoints**: `/api/counts`, `/api/events`, `/api/top-countries`, `/api/top-ports`, `/api/attack-dist`, `/api/severity-dist`, `/api/feed-ports`, `/api/seed`, `/api/countries`, `/api/target-countries`, `/api/top-exploits`.
 - **`/api/events`** accepts optional query params: `severity`, `attack_type`, `source_country`, `target_country`.
 - **WebSocket** broadcasts `{ type: 'new_event', event }` for each simulated event.
