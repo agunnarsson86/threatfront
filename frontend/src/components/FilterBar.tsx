@@ -97,11 +97,6 @@ export function FilterBar({ filters, onFilterChange, mode, onModeChange }: Props
         <div>
           <label className="text-[10px] text-white/30 uppercase tracking-wider block mb-1.5">Severity</label>
           <div className="flex gap-1">
-            {filters.severity.length === 0 && (
-              <button className="text-[10px] px-2 py-1 rounded uppercase tracking-wider bg-accent-cyan/20 text-accent-cyan mr-1">
-                All
-              </button>
-            )}
             {SEVERITIES.map((s) => (
               <button
                 key={s}
@@ -112,7 +107,7 @@ export function FilterBar({ filters, onFilterChange, mode, onModeChange }: Props
                     : 'bg-white/5 hover:bg-white/10 text-white/50 hover:text-white/80'
                 }`}
               >
-                {s.slice(0, 2)}
+                {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
           </div>
