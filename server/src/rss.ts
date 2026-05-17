@@ -41,7 +41,7 @@ function isPrivateIp(ip: string): boolean {
   if ((n >>> 24) === 10) return true
   if ((n >>> 20) === 2753) return true
   if ((n >>> 16) === 49320) return true
-  if ((n >>> 24) === 169 && (n >>> 16) & 0xff === 254) return true
+  if ((n >>> 24) === 169 && ((n >>> 16) & 0xff) === 254) return true
   return false
 }
 

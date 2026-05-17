@@ -165,11 +165,16 @@ app.get('/api/target-countries', (_req, res) => {
 
 app.get('/api/events', (req, res) => {
   const limit = Math.min(safeInt(req.query.limit as string, 50), 200)
-  const filters = {
-    severity: req.query.severity as string | undefined,
+  const filters: { severity?: string | string[]; attack_type?: string; source_country?: string; target_country?: string } = {
     attack_type: req.query.attack_type as string | undefined,
     source_country: req.query.source_country as string | undefined,
     target_country: req.query.target_country as string | undefined,
+  }
+  const s = req.query.severity
+  if (Array.isArray(s)) {
+    filters.severity = s as string[]
+  } else if (typeof s === 'string') {
+    filters.severity = s
   }
   res.json(getEvents(limit, filters))
 })

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { ThreatFeed } from '../components/ThreatFeed'
 import type { AttackEvent } from '../types'
 
-const NO_FILTERS = { severity: 'all', attack_type: 'all', source_country: 'all', target_country: 'all' }
+const NO_FILTERS = { severity: [], attack_type: 'all', source_country: 'all', target_country: 'all' }
 
 const MOCK_EVENTS = vi.hoisted(() => [
   {

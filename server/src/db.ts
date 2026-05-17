@@ -72,11 +72,14 @@ export function getEventCounts(): EventCounts {
   return { total: row.total, last_24h: row.last_24h, last_hour: row.last_hour }
 }
 
-export function getEvents(limit: number = 50, filters?: { severity?: string; attack_type?: string; source_country?: string; target_country?: string }) {
+export function getEvents(limit: number = 50, filters?: { severity?: string | string[]; attack_type?: string; source_country?: string; target_country?: string }) {
   const db = getDb()
   let sql = 'select * from events where 1=1'
   const params: unknown[] = []
-  if (filters?.severity && filters.severity !== 'all') {
+  if (filters?.severity && Array.isArray(filters.severity) && filters.severity.length > 0) {
+    sql += ` and severity in (${filters.severity.map(() => '?').join(',')})`
+    params.push(...filters.severity)
+  } else if (filters?.severity && typeof filters.severity === 'string' && filters.severity !== 'all') {
     sql += ' and severity = ?'
     params.push(filters.severity)
   }

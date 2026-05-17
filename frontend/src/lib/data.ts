@@ -1,7 +1,7 @@
 import type { AttackEvent, EventCounts, TopCountry, TopPort, FeedPort, AttackDistribution, SeverityDistribution, Exploit, RssResult, Filters, Mode } from '../types'
 
 export function matchesFilters(e: AttackEvent, f: Filters): boolean {
-  if (f.severity && f.severity !== 'all' && e.severity !== f.severity) return false
+  if (f.severity.length > 0 && !f.severity.includes(e.severity)) return false
   if (f.attack_type && f.attack_type !== 'all' && e.attack_type !== f.attack_type) return false
   if (f.source_country && f.source_country !== 'all' && e.source_country !== f.source_country) return false
   if (f.target_country && f.target_country !== 'all' && e.target_country !== f.target_country) return false
@@ -14,7 +14,9 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 function toParams(f?: Partial<Filters>): string {
   if (!f) return ''
   const p = new URLSearchParams()
-  if (f.severity && f.severity !== 'all') p.set('severity', f.severity)
+  if (f.severity && f.severity.length > 0) {
+    for (const s of f.severity) p.append('severity', s)
+  }
   if (f.attack_type && f.attack_type !== 'all') p.set('attack_type', f.attack_type)
   if (f.source_country && f.source_country !== 'all') p.set('source_country', f.source_country)
   if (f.target_country && f.target_country !== 'all') p.set('target_country', f.target_country)
