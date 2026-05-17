@@ -1,3 +1,5 @@
+import dns from 'dns'
+
 export interface RssItem {
   title: string
   link: string
@@ -28,8 +30,34 @@ function isValidUrl(url: string): boolean {
   }
 }
 
+function ipToInt(ip: string): number {
+  return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0
+}
+
+function isPrivateIp(ip: string): boolean {
+  const n = ipToInt(ip)
+  if (n === 0) return true
+  if ((n >>> 24) === 127) return true
+  if ((n >>> 24) === 10) return true
+  if ((n >>> 20) === 2753) return true
+  if ((n >>> 16) === 49320) return true
+  if ((n >>> 24) === 169 && (n >>> 16) & 0xff === 254) return true
+  return false
+}
+
+async function isPublicUrl(url: string): Promise<boolean> {
+  try {
+    const { hostname } = new URL(url)
+    const { address } = await dns.promises.lookup(hostname, { family: 4 })
+    return !isPrivateIp(address)
+  } catch {
+    return false
+  }
+}
+
 export async function fetchRss(url: string): Promise<RssResult> {
   if (!isValidUrl(url)) throw new Error('Invalid URL')
+  if (!(await isPublicUrl(url))) throw new Error('URL must point to a public address')
   const res = await fetch(url, {
     headers: { 'User-Agent': 'threatfront-rss/1.0' },
     signal: AbortSignal.timeout(10000),

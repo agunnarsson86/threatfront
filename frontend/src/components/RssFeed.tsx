@@ -30,6 +30,15 @@ async function refreshAll(feeds: SavedFeed[]): Promise<SavedFeed[]> {
   }))
 }
 
+function safeUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return u.protocol === 'http:' || u.protocol === 'https:' ? url : '#'
+  } catch {
+    return '#'
+  }
+}
+
 function timeAgo(dateStr: string): string {
   const sec = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
   if (!dateStr || isNaN(sec)) return ''
@@ -191,7 +200,7 @@ export function RssFeed() {
           {flatItems.map(({ item, source }, i) => (
             <a
               key={`${source}-${i}`}
-              href={item.link}
+              href={safeUrl(item.link)}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-2 text-white/60 hover:text-accent-cyan transition-colors px-0.5 py-0.5 rounded hover:bg-white/[0.03]"
