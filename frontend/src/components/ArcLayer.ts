@@ -67,8 +67,9 @@ export function ArcLayer({ events }: { events: AttackEvent[] }) {
 
       const size = map.getSize()
       const dpr = window.devicePixelRatio || 1
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, size.x * dpr, size.y * dpr)
-      ctx.scale(dpr, dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
 
       const now = Date.now()
 

@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getEvents, onNewEvent, matchesFilters } from '../lib/data'
 import type { AttackEvent, Filters } from '../types'
-import { SEVERITY_CONFIG, COUNTRY_FLAGS } from '../types'
+import { SEVERITY_CONFIG } from '../types'
+import { useVisibleItems } from '../lib/useVisibleItems'
+
+const ITEM_HEIGHT = 34
 
 function Arrow({ color, flash }: { color: string; flash: boolean }) {
   return (
@@ -27,7 +30,7 @@ export function ThreatFeed({ filters }: Props) {
   const [events, setEvents] = useState<AttackEvent[]>([])
   const [tick, setTick] = useState(0)
   const [flashIds, setFlashIds] = useState<Set<string>>(new Set())
-  const listRef = useRef<HTMLDivElement>(null)
+  const { ref: listRef, count: visibleCount } = useVisibleItems(ITEM_HEIGHT, 3, 50)
 
   useEffect(() => {
     const ticker = setInterval(() => setTick((t) => t + 1), 1000)
@@ -35,13 +38,13 @@ export function ThreatFeed({ filters }: Props) {
   }, [])
 
   useEffect(() => {
-    getEvents(20, filters).then((data) => setEvents(data))
+    getEvents(50, filters).then((data) => setEvents(data))
 
     const unsub = onNewEvent((newEvent) => {
       if (!matchesFilters(newEvent, filters)) return
       setEvents((prev) => {
         if (prev.some((e) => e.id === newEvent.id)) return prev
-        return [newEvent, ...prev].slice(0, 20)
+        return [newEvent, ...prev].slice(0, 50)
       })
       setFlashIds((prev) => new Set(prev).add(newEvent.id))
       setTimeout(() => {
@@ -55,12 +58,6 @@ export function ThreatFeed({ filters }: Props) {
 
     return () => { unsub() }
   }, [filters])
-
-  useEffect(() => {
-    if (listRef.current) {
-      listRef.current.scrollTop = 0
-    }
-  }, [events.length])
 
   const fadeStart = 30
 
@@ -84,8 +81,8 @@ export function ThreatFeed({ filters }: Props) {
         <span>Live Feed</span>
         <span className="w-1.5 h-1.5 rounded-full bg-accent-red animate-pulse-glow" />
       </div>
-      <div ref={listRef} className="overflow-y-auto flex-1 -mx-1 px-1 space-y-0.5">
-        {events.map((e, i) => {
+      <div ref={listRef} className="overflow-hidden flex-1 -mx-1 px-1 space-y-0.5">
+        {events.slice(0, visibleCount).map((e, i) => {
           const sev = SEVERITY_CONFIG[e.severity]
           const fade = i > 0 ? itemOpacity(e.timestamp) : 1
           return (
@@ -102,9 +99,17 @@ export function ThreatFeed({ filters }: Props) {
               </span>
               <span className="text-white/70 truncate min-w-0 shrink">{e.attack_type}</span>
               <span className="inline-flex items-center gap-1 shrink-0">
-                <span className="text-white/30">{COUNTRY_FLAGS[e.source_country] || e.source_country}</span>
+                <img
+                  src={`https://flagcdn.com/16x12/${e.source_country.toLowerCase()}.png`}
+                  alt={e.source_country}
+                  className="w-3.5 h-2.5 object-cover rounded-sm"
+                />
                 <Arrow color={sev.color} flash={flashIds.has(e.id)} />
-                <span className="text-white/30">{COUNTRY_FLAGS[e.target_country] || e.target_country}</span>
+                <img
+                  src={`https://flagcdn.com/16x12/${e.target_country.toLowerCase()}.png`}
+                  alt={e.target_country}
+                  className="w-3.5 h-2.5 object-cover rounded-sm"
+                />
               </span>
               <span className="text-white/20 shrink-0">:{e.port}</span>
               <span className="text-white/20 ml-auto shrink-0 whitespace-nowrap">{timeAgo(e.timestamp)}</span>

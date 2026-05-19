@@ -1,6 +1,9 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { fetchRss } from '../lib/data'
 import type { RssItem, RssResult } from '../types'
+import { useVisibleItems } from '../lib/useVisibleItems'
+
+const ITEM_HEIGHT = 24
 
 interface SavedFeed {
   url: string
@@ -130,6 +133,7 @@ export function RssFeed() {
   }, [feeds])
 
   const anyLoading = feeds.some((f) => f.loading)
+  const { ref: itemsRef, count } = useVisibleItems(ITEM_HEIGHT, 3, 40)
 
   return (
     <div className="panel h-full flex flex-col">
@@ -189,7 +193,7 @@ export function RssFeed() {
         <span className="w-16 text-right">Source</span>
       </div>
 
-      <div className="overflow-y-auto flex-1 min-h-0">
+      <div ref={itemsRef} className="overflow-hidden flex-1 min-h-0">
         {flatItems.length === 0 && !anyLoading && (
           <div className="text-[11px] text-white/20 text-center py-3">No feeds added yet</div>
         )}
@@ -197,7 +201,7 @@ export function RssFeed() {
           <div className="text-white/20 text-[10px] text-center py-3">Loading feeds...</div>
         )}
         <div className="space-y-0.5">
-          {flatItems.map(({ item, source }, i) => (
+          {flatItems.slice(0, count).map(({ item, source }, i) => (
             <a
               key={`${source}-${i}`}
               href={safeUrl(item.link)}

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { getTopCountries, getFeedPorts, getSeverityDistribution, onNewEvent } from '../lib/data'
 import type { TopCountry, FeedPort, SeverityDistribution } from '../types'
-import { COUNTRY_FLAGS, SEVERITY_COLORS } from '../types'
+import { SEVERITY_COLORS } from '../types'
+import { useVisibleItems } from '../lib/useVisibleItems'
 
 const SEVERITY_NAMES: Record<string, string> = {
   critical: 'Critical',
@@ -9,6 +10,8 @@ const SEVERITY_NAMES: Record<string, string> = {
   medium: 'Medium',
   low: 'Low',
 }
+
+const ROW_HEIGHT = 26
 
 export function StatsPanel() {
   const [topCountries, setTopCountries] = useState<TopCountry[]>([])
@@ -43,16 +46,22 @@ export function StatsPanel() {
   const totalSeverity = severityDist.reduce((s, d) => s + d.count, 0) || 1
   const totalTop = topCountries.reduce((s, c) => s + c.count, 0) || 1
 
-  const top5Countries = topCountries.slice(0, 5)
+  const countries = useVisibleItems(ROW_HEIGHT, 2, 10)
+  const severities = useVisibleItems(ROW_HEIGHT, 2, 4)
+  const ports = useVisibleItems(ROW_HEIGHT, 2, 10)
 
   return (
     <>
       <div className="panel">
         <div className="panel-title">Top Countries</div>
-        <div className="space-y-1">
-          {top5Countries.map((c) => (
+        <div ref={countries.ref} className="panel-content space-y-1">
+          {topCountries.slice(0, countries.count).map((c) => (
             <div key={c.source_country} className="flex items-center gap-2 text-xs">
-              <span className="text-sm">{COUNTRY_FLAGS[c.source_country] || '🏴'}</span>
+              <img
+                src={`https://flagcdn.com/24x18/${c.source_country.toLowerCase()}.png`}
+                alt={c.source_country}
+                className="w-4 h-3 object-cover rounded-sm"
+              />
               <span className="text-white/60 w-6">{c.source_country}</span>
               <div className="flex-1 h-1.5 bg-white/5 rounded-full overflow-hidden">
                 <div
@@ -63,7 +72,7 @@ export function StatsPanel() {
               <span className="text-white/40 w-12 text-right">{((c.count / totalTop) * 100).toFixed(0)}%</span>
             </div>
           ))}
-          {top5Countries.length === 0 && (
+          {topCountries.length === 0 && (
             <div className="text-xs text-white/20 text-center py-4">Waiting for data...</div>
           )}
         </div>
@@ -71,8 +80,8 @@ export function StatsPanel() {
 
       <div className="panel">
         <div className="panel-title">Severity</div>
-        <div className="space-y-1">
-          {severityDist.map((d) => (
+        <div ref={severities.ref} className="panel-content space-y-1">
+          {severityDist.slice(0, severities.count).map((d) => (
             <div key={d.severity} className="flex items-center gap-2 text-xs">
               <span
                 className="w-1.5 h-1.5 rounded-full shrink-0"
@@ -93,8 +102,8 @@ export function StatsPanel() {
 
       <div className="panel">
         <div className="panel-title">Top Ports (SANS Feed)</div>
-        <div className="space-y-1">
-          {feedPorts.slice(0, 5).map((p) => (
+        <div ref={ports.ref} className="panel-content space-y-1">
+          {feedPorts.slice(0, ports.count).map((p) => (
             <div key={p.port} className="flex items-center gap-2 text-xs">
               <span className="text-accent-cyan w-8 font-medium">{p.port}</span>
               <div className="flex-1 h-1 bg-white/5 rounded-full overflow-hidden">

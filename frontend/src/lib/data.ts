@@ -8,8 +8,8 @@ export function matchesFilters(e: AttackEvent, f: Filters): boolean {
   return true
 }
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3001'
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const WS_URL = import.meta.env.VITE_WS_URL || `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.hostname}:3001`
+const API_URL = import.meta.env.VITE_API_URL || ''
 
 function toParams(f?: Partial<Filters>): string {
   if (!f) return ''
@@ -129,14 +129,24 @@ function disconnectSharedWs() {
   if (wsRetryTimeout) clearTimeout(wsRetryTimeout)
   if (sharedWs) {
     sharedWs.onclose = null
-    sharedWs.close()
+    sharedWs.onopen = null
+    sharedWs.onmessage = null
+    sharedWs.onerror = null
+    if (sharedWs.readyState === WebSocket.OPEN) sharedWs.close()
     sharedWs = null
+  }
+}
+
+function ensureConnected() {
+  if (!sharedWs) {
+    wsClosed = false
+    connectSharedWs()
   }
 }
 
 export function onNewEvent(callback: WsCallback): () => void {
   eventListeners.add(callback)
-  if (!sharedWs) connectSharedWs()
+  ensureConnected()
   wsRefCount++
   return () => {
     eventListeners.delete(callback)
@@ -147,7 +157,7 @@ export function onNewEvent(callback: WsCallback): () => void {
 
 export function onModeChanged(callback: ModeCallback): () => void {
   modeListeners.add(callback)
-  if (!sharedWs) connectSharedWs()
+  ensureConnected()
   wsRefCount++
   return () => {
     modeListeners.delete(callback)
